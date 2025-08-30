@@ -335,10 +335,20 @@ function letCitizensWork(time){
 
 const game={
     mainInterval: undefined,
+    playing: false,
     play(){
         this.mainInterval=setInterval(main,500);
+        this.playing=true;
     },
     pause(){
         clearInterval(this.mainInterval)
+        this.playing=false;
+    },
+    playToggle(){
+        if(this.playing){
+            this.pause();
+        } else {
+            this.play();
+        }
     }
 }
