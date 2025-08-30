@@ -1,6 +1,7 @@
 body {
     background-color:burlywood;
 }
+
 #settlement {
     display:grid;
 }
@@ -10,15 +11,20 @@ body {
     box-sizing: border-box;
     border: 1px solid black;
     float:left;
+    height:100pt;
+    overflow:scroll;
+    width:100%;
 }
 .citizen {
     float:left;
     display: inline;
     padding:5px;
+    font-size:small;
 }
 .citizen .name {
     background-color:aliceblue;
     padding:2px;
+    font-weight:bold;
 }
 .citizen .profession {
     background-color:aquamarine;
@@ -52,6 +58,7 @@ body {
     position:absolute;
     top:0;
     left:0;
+    white-space: nowrap;
 }
 .task .progressbar.inProgress {
     background-color:blue;
