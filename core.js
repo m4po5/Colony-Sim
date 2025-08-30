@@ -49,12 +49,13 @@ function Location(name){
     }
 }
 
-function Citizen(name, profession){
+function Citizen(name, profession, settlement){
     this.name = "J. Doe";
     if (name !== undefined){
         this.name = name;
     }
     this.profession = profession;
+    this.settlement = settlement;
     this.tasks = [];
     this.assignTask = function(task){
         this.tasks.push(task);
@@ -68,10 +69,10 @@ function Citizen(name, profession){
             this.tasks = this.tasks.filter(el => !el.done);
         }
         if (timeLeft > 0){
-            let availableLocations = Settlement.getLocationsByProfession(this.profession);
+            let availableLocations = this.settlement.getLocationsByProfession(this.profession);
 
             if (availableLocations.length !== 0){
-                let sortedLocations = Settlement.sortLocationByMinLevelRequired(availableLocations);
+                let sortedLocations = this.settlement.sortLocationByMinLevelRequired(availableLocations);
                 // This really should create a new task list which is then worked through within this task,
                 // but is called like any other task by the Citizen.
                 
@@ -84,12 +85,6 @@ function Citizen(name, profession){
         }
     }
 }
-
-
-//task encapsulating unique checkout tasks per location tasks to loop through.
-// 1. create get locationsOfProfession task
-// 2. check each location individually tasks
-// 3. repeat
 
 function SeekWorkTask(location){
     Task.call(this,"Seeking Work",20); //Inherits properties
@@ -115,116 +110,137 @@ function SeekWorkTask(location){
 SeekWorkTask.prototype = Object.create(Task.prototype);//Inherits methods
 SeekWorkTask.prototype.constructor = SeekWorkTask;
 
-function createCitizen(){
-    const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael"];
-    const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith"];
-    const profession = ProfessionsArray[Math.floor(Math.random() * ProfessionsArray.length)];
-
-    let name = "";
-
-    if (Math.random() > 0.5){
-        name = mFirst[Math.floor(Math.random() * mFirst.length)]
-    } else {
-        name = wFirst[Math.floor(Math.random() * wFirst.length)]
-    }
-
-    return new Citizen(name, profession);
-}
-
-const Settlement = new Location("Settlement",5);
-Settlement.citizens = [];
-Settlement.addCitizens = function(amount){
-    if (amount === undefined){
-        return [];
-    }
-    const citizens = [];
-    for (let i = 0; i < amount; i++) {
-        citizens.push(createCitizen());
-    }
-    this.citizens.push(...citizens);
-    return citizens;
-}
-Settlement.getExp = function(category){
-    // return sum exp for category of all citizens
-}
-Settlement.buildings = []; // Buildings actually build inside the Settlement
-Settlement.addBuilding = function (building){
-    if (building instanceof Location){
-        this.buildings.push(building)
-    } else {
-        console.error("Settlement.addBuilding: object is not of instance Location")
-    }
-}
-Settlement.getLocationsByProfession = function(profession){
-    const locations = [];
-    if (this.locationOfProfession(Settlement,profession)){
-        locations.push(Settlement);
-    }
-    Settlement.buildings.forEach(building => {
-        if (this.locationOfProfession(building,profession)){
-            locations.push(building);
+function Settlement(name){
+    Location.call(this,name);
+    this.citizens = [];
+    this.buildings = [];
+    this.addCitizen = function(citizens){
+    //unsave, but I'm learning to favour functional progress...
+        this.citizens.push(citizens);
+    };
+    this.getExp = function(category){
+        // return sum exp for category of all citizens
+    };
+    this.addBuilding = function (building){
+        if (building instanceof Location){
+            this.buildings.push(building)
+        } else {
+            console.error("Settlement.addBuilding: object is not of instance Location")
         }
-    });
-    
-    return locations;
-}
-Settlement.locationOfProfession = function(location,profession){
-    let result = false;
-    location.tasks.forEach(task => {
-        if(task.profession === profession){
-            result = true;
+    };
+    this.getLocationsByProfession = function(profession){
+        const locations = [];
+        if (this.locationOfProfession(pieces.settlement,profession)){
+            locations.push(pieces.settlement);
         }
-    });
-    return result;
+        pieces.settlement.buildings.forEach(building => {
+            if (this.locationOfProfession(building,profession)){
+                locations.push(building);
+            }
+        });
+        
+        return locations;
+    }
+    this.locationOfProfession = function(location,profession){
+        let result = false;
+        location.tasks.forEach(task => {
+            if(task.profession === profession){
+                result = true;
+            }
+        });
+        return result;
+    }
+    this.sortLocationByMinLevelRequired = function(locations){
+        return locations.sort((a,b) => b.minLevelRequired() - a.minLevelRequired());
+    }  
 }
-Settlement.sortLocationByMinLevelRequired = function(locations){
-    return locations.sort((a,b) => b.minLevelRequired() - a.minLevelRequired());
-}
+Settlement.prototype = Object.create(Location.prototype);//Inherits methods
+Settlement.prototype.constructor = Settlement;
 
 //-------------- Presets --------------
 
-const Forester = new Location("Forester");
-Settlement.addBuilding(Forester);
+const pieces = {
+    settlement: new Settlement("Settlement"),
+    forester: new Location("Forester"),
+    init(){
+        this.settlement.addBuilding(this.forester);
+    }
+}
+pieces.init();
 
-const addGathering = function(){
-    const Gathering = new Task("Gathering",
-        30,
-        Professions.AGRICULTURE,
-        0,
-        [[Professions.AGRICULTURE, 10]]);
-    Gathering.location = Settlement;
-    Settlement.tasks.push(Gathering);
+const core = {
+    generate: {
+        citizen(settlement){
+            const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael"];
+            const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith"];
+            const profession = ProfessionsArray[Math.floor(Math.random() * ProfessionsArray.length)];
+
+            let name = "";
+
+            if (Math.random() > 0.5){
+                name = mFirst[Math.floor(Math.random() * mFirst.length)]
+            } else {
+                name = wFirst[Math.floor(Math.random() * wFirst.length)]
+            }
+
+            let citizen = new Citizen(name, profession, settlement);
+            settlement.addCitizen(citizen);
+            return citizen;
+        },
+        citizens(amount,settlement){
+            if (amount === undefined){
+                return [];
+            }
+            const citizens = [];
+            for (let i = 0; i < amount; i++) {
+                citizens.push(this.citizen(settlement));
+            }
+            return citizens;
+        }
+    },
+    addTask:{
+        gathering(){
+            const Gathering = new Task("Gathering",
+                30,
+                Professions.AGRICULTURE,
+                0,
+                [[Professions.AGRICULTURE, 10]]);
+            Gathering.location = Settlement;
+            pieces.settlement.tasks.push(Gathering);
+        },
+        hunting(){
+            const Hunting = new Task("Hunting",
+                40,
+                Professions.ANIMAL_HANDLING,
+                0,[[Professions.ANIMAL_HANDLING, 10]]);
+            Hunting.location = Settlement;
+            pieces.settlement.tasks.push(Hunting)
+        },
+        foresting(){
+            const Foresting = new Task("Foresting",
+                20,
+                Professions.AGRICULTURE,
+                2,
+                [[Professions.AGRICULTURE, 20],[Professions.CONSTRUCTION,5]]);
+            Foresting.location = pieces.forester;
+            pieces.forester.tasks.push(Foresting);
+        },
+        random(amount){
+            for (let i = 0; i < amount; i++) {
+                let rnd = Math.random();
+                if(rnd<0.6) { this.gathering()}
+                else if(rnd<0.8) { this.hunting()}
+                else {this.foresting()}
+            }
+        }
+    }
 }
 
-addGathering();addGathering();addGathering();
-
-const addHunting = function(){
-    const Hunting = new Task("Hunting",
-        40,
-        Professions.ANIMAL_HANDLING,
-        0,[[Professions.ANIMAL_HANDLING, 10]]);
-    Hunting.location = Settlement;
-    Settlement.tasks.push(Hunting)
-}
-
-addHunting();addHunting();
-
-const addForesting = function(){
-    const Foresting = new Task("Foresting",
-        20,
-        Professions.AGRICULTURE,
-        2,
-        [[Professions.AGRICULTURE, 20],[Professions.CONSTRUCTION,5]]);
-    Foresting.location = Forester;
-    Forester.tasks.push(Foresting);
-}
-
-addForesting();
+core.generate.citizens(7,pieces.settlement);
+pieces.settlement.citizens.forEach(cit => {if(cit.profession === Professions.CONSTRUCTION){cit.profession = Professions.AGRICULTURE}});
+core.addTask.random(25);
 
 //create array with all Locations offering Tasks of specific Profession
-
-
-Settlement.addCitizens(6);
 
 // ------------- Testing --------------
 const todos = [new Task("design",20), new Task("implement",12), new Task("review", 8)]
@@ -233,6 +249,8 @@ const giveCitizenTasks = function(citizen, tasks){
         citizen.tasks.push(new Task(tasks[i].name, tasks[i].timeLeft));
     }
 }
+
+// ----------- Game View and Main Coil ---------
 
 $(document).ready(function(Settlement){
     updateSettlementView();
@@ -243,14 +261,14 @@ function updateSettlementView(){
     $("#Settlement").empty();
 
     const citizensView = $(`<div class="citizens"></div>`);
-    Settlement.citizens.forEach(citizen => {
+    pieces.settlement.citizens.forEach(citizen => {
         citizensView.append(createCitizenView(citizen));
     })
     $("#Settlement").append(citizensView);
 
     const locationsView = $(`<div class="locations"></div>`);
-    locationsView.append(createLocationView(Settlement));
-    Settlement.buildings.forEach(location => {
+    locationsView.append(createLocationView(pieces.settlement));
+    pieces.settlement.buildings.forEach(location => {
         locationsView.append(createLocationView(location));
     })
     $("#Settlement").append(locationsView);
@@ -264,7 +282,7 @@ function createCitizenView(citizen){
     html += `<div class="task">`
     if (citizen.tasks.length > 0){
         let task = citizen.tasks[0];
-        html += task.name + " at " + task.location.name;
+        html += task.name;
     } else {
         html += `idling`;
     }
@@ -309,10 +327,18 @@ function main(){
     letCitizensWork(timePerTick);
     updateSettlementView();
 }
-setInterval(main,500);
-
 function letCitizensWork(time){
-    Settlement.citizens.forEach(citizen => {
+    pieces.settlement.citizens.forEach(citizen => {
         citizen.workForDuration(time);
     })
+}
+
+const game={
+    mainInterval: undefined,
+    play(){
+        this.mainInterval=setInterval(main,500);
+    },
+    pause(){
+        clearInterval(this.mainInterval)
+    }
 }
