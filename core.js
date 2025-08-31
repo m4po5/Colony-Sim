@@ -5,19 +5,30 @@ const Professions = Object.freeze({
     ANIMAL_HANDLING: ProfessionsArray[2]
 })
 
-function Task(name, timeToComplete, profession, minLevelRequired, expYield){
+function Task(name, timeToComplete, profession, workCall, location,minLevelRequired, expYield){
     this.name = name;
     this.timeToComplete = timeToComplete;
     this.timeLeft = timeToComplete;
     this.profession = profession;
+    this.workCall = workCall;
+    this.location = location;
     this.minLevelRequired = minLevelRequired;
     this.expYield = expYield;
     this.status = "To Do"
     this.done = false;
+    this.perpetual = false;
     this.assignee = undefined;
-    this.location = undefined;
+    this.location = location;
     this.work = function(time){
-        return this.investTime(time);
+        let timeLeft = this.investTime(time);
+        if(this.done && typeof this.workCall === "function"){
+            if (this.perpetual === true){
+                this.done = false;
+                this.timeLeft = this.timeToComplete;
+            }
+            this.workCall();
+        }
+        return timeLeft;
     };
     this.investTime = function(time){
         if(this.done){
@@ -38,6 +49,7 @@ function Task(name, timeToComplete, profession, minLevelRequired, expYield){
 function Location(name){
     this.name = name;
     this.tasks = [];
+    this.tasksOverview = () => { return [{}]};
     this.minLevelRequired = function(){
         let minLevel = 10;
         this.tasks.forEach(task => {
@@ -46,7 +58,33 @@ function Location(name){
             }
         })
         return minLevel;
-    }
+    };
+    this.addTask = function(task,unshift){
+        if(unshift){
+            this.tasks.unshift(task);
+        } else {
+            this.tasks.push(task);
+        }
+    };
+    this.removeTask = function(task){
+        this.tasks = this.tasks.filter(t => t !== task);
+    };
+    this.tasksDone = function(profession){
+        const tasksDone = this.tasks.filter(t => t.profession === profession && t.done)
+        return tasksDone;
+    };
+    this.findTaskToPlan = function(profession){
+        let taskToPlan = undefined;
+        const tasksOverview = this.tasksOverview().filter(task => task.profession===profession);
+        const runningTasks = this.tasks.filter(t => t.profession === profession);
+        tasksOverview.forEach(task => {
+            const runningTask = runningTasks.filter(rTask => rTask.name===task.name);
+            if (runningTask.length<task.max){
+                taskToPlan=task.call();
+            }
+        })
+        return taskToPlan;
+    };
 }
 
 function Citizen(name, profession, settlement){
@@ -65,6 +103,9 @@ function Citizen(name, profession, settlement){
         }
         task.assignee = this;
     }
+    this.unAssignTask = function(task){
+        this.tasks = this.tasks.filter(t => t !== filter)
+    }
     this.workForDuration = function(time){
         let timeLeft = time;
         
@@ -77,92 +118,47 @@ function Citizen(name, profession, settlement){
 
             if (availableLocations.length !== 0){
                 let sortedLocations = this.settlement.sortLocationByMinLevelRequired(availableLocations);
-                // This really should create a new task list which is then worked through within this task,
-                // but is called like any other task by the Citizen.
                 
                 sortedLocations.forEach(loc => {
-                    this.assignTask(new SeekWorkTask(loc));
+                    this.planSeekWorkTask(loc);
                 })
 
                 this.workForDuration(timeLeft);
             }
         }
-    }
-}
-
-function SeekWorkTask(location){
-    Task.call(this,"Seeking Work",20); //Inherits properties
-    this.location = location;
-    this.work = function(time){ //sort of method shadowing, base.method won't be visited.
-        let timeLeft = this.investTime(time);
-        if(this.done){
-            let citizen = this.assignee;
-            let availableTask = undefined;
-            location.tasks.forEach(task => {
-                if (task.assignee === undefined && task.profession === citizen.profession && !task.done && availableTask === undefined){
-                    availableTask = task;
-                }
-            })
-            if (availableTask !== undefined){
-                citizen.tasks = citizen.tasks.filter(task => !(task instanceof SeekWorkTask));
-                citizen.assignTask(availableTask);
-            }
-        }
-        return timeLeft;
-    }
-}
-SeekWorkTask.prototype = Object.create(Task.prototype);//Inherits methods
-SeekWorkTask.prototype.constructor = SeekWorkTask;
-
-function OverseeingTask(location,profession){
-    Task.call(this,"Overseeing",5,profession);
-    this.location = location;
-    this.work = function(time){
-        let timeLeft = this.investTime(time);
-        if(this.done){
-            let tasksDone = this.tasksDone();
-            let taskToPlan = undefined;
-            let ass = this.assignee;
-            let workTask = undefined;
-            if(tasksDone.length > 0){
-                //this.assignee.tasks.unshift(new CloseTaskTask(this.location,this.profession,tasksDone[0]))
-                location.tasks=location.tasks.filter(el => el!==tasksDone[0]);
-            } else if ((taskToPlan = this.findTaskToPlan())!==undefined){
-                location.tasks.push(taskToPlan);
-            } else {
-                workTask=location.tasks.filter(t => t.profession === ass.profession && t.assignee === undefined)[0];
-                if(workTask !== undefined){
-                    ass.assignTask(workTask,true);
-                }
-            }
-            this.timeLeft=this.timeToComplete;
-            this.done = false;
-        }
-        return timeLeft;
     };
-    this.tasksDone = function(){
-        const tasks = location.tasks.filter(task => task.profession === this.profession && task.done && !(task instanceof OverseeingTask))
-        return tasks;
-    };
-    this.findTaskToPlan = function(){
-        let taskToPlan = undefined;
-        const tasksOverview = location.tasksOverview().filter(task => task.profession===this.profession);
-        const runningTasks = location.tasks.filter(t => t.profession === this.profession);
-        tasksOverview.forEach(task => {
-            const runningTask = runningTasks.filter(rTask => rTask.name===task.name);
-            if (runningTask.length<task.max){
-                taskToPlan=task.call();
+    this.seekWorkCall = function(){
+        let citizen = this.assignee;
+        let availableTask = undefined;
+        this.location.tasks.forEach(task => {
+            if (task.assignee === undefined && task.profession === citizen.profession && !task.done && availableTask === undefined){
+                availableTask = task;
             }
         })
-        return taskToPlan;
+        if (availableTask !== undefined){
+            citizen.assignTask(availableTask);
+        }
+    }
+    this.createSeekWorkTask = function(location){
+        return new Task("Seeking Work",20,this.profession,this.seekWorkCall,location,0);
+    }
+    this.createIdleTask = function(){
+        let idleTypes = ["Stargazing","Strolling","Picking Flowers","Watching People Work"];
+        let idleType = idleTypes[Math.floor(Math.random() * idleTypes.length)];
+        return new Task(idleType,6);
+    }
+    this.planSeekWorkTask = function(location,unshift){
+        this.assignTask(this.createSeekWorkTask(location,unshift));
+    }
+    this.planIdleTask = function(unshift){
+        let IdleTask = this.createIdleTask();
+        this.assignTask(IdleTask,unshift);
     }
 }
-OverseeingTask.prototype = Object.create(Task.prototype);
-OverseeingTask.prototype.constructor = OverseeingTask;
 
 function Settlement(name){
     Location.call(this,name);
-    this.tasks = [new OverseeingTask(this,Professions.AGRICULTURE),new OverseeingTask(this,Professions.ANIMAL_HANDLING)];
+    this.tasks = [];
     this.citizens = [];
     this.buildings = [];
     this.tasksOverview = function(){
@@ -186,12 +182,10 @@ function Settlement(name){
         }
         return [gatheringWoodTask,gatheringFoodTask,huntingTask];
     };
-    this.addCitizen = function(citizens){
-    //unsave, but I'm learning to favour functional progress...
-        this.citizens.push(citizens);
-    };
-    this.getExp = function(category){
-        // return sum exp for category of all citizens
+    this.addCitizen = function(citizen){
+        if(citizen instanceof Citizen){
+            this.citizens.push(citizen);   
+        }
     };
     this.addBuilding = function (building){
         if (building instanceof Location){
@@ -225,10 +219,32 @@ function Settlement(name){
     this.sortLocationByMinLevelRequired = function(locations){
         return locations.sort((a,b) => b.minLevelRequired() - a.minLevelRequired());
     };
+    this.createOverseeTask = function(profession){
+        let task = new Task("Overseeing "+profession,5,profession,this.overseeingWorkCall,this,0)
+        task.perpetual = true;
+        return task;
+    };
+    this.overseeingWorkCall = function(){
+        let tasksDone = this.location.tasksDone(this.profession);
+        let taskToPlan = undefined;
+        let ass = this.assignee;
+        let workTask = undefined;
+        if(tasksDone.length > 0){
+            this.location.removeTask(tasksDone[0]);
+        } else if ((taskToPlan = this.location.findTaskToPlan(this.profession))!==undefined){
+            this.location.tasks.push(taskToPlan);
+        } else if((workTask=this.location.tasks.filter(t => t.profession === ass.profession && t.assignee === undefined)[0]) !== undefined){
+            ass.assignTask(workTask,true);
+        } else {
+            ass.planIdleTask(true);
+        }
+    };
     this.createTaskGatheringWood = function(){
             const gatheringWoodTask = new Task("Gathering Wood",
                 40,
                 Professions.AGRICULTURE,
+                undefined,
+                this,
                 0,
                 [[Professions.AGRICULTURE, 10]]);
             gatheringWoodTask.location = this;
@@ -238,6 +254,8 @@ function Settlement(name){
             const gatheringFoodTask = new Task("Gathering Food",
                 30,
                 Professions.AGRICULTURE,
+                undefined,
+                this,
                 0,
                 [[Professions.AGRICULTURE, 10]]);
             gatheringFoodTask.location = this;
@@ -247,6 +265,8 @@ function Settlement(name){
             const huntingTask = new Task("Hunting",
                 60,
                 Professions.ANIMAL_HANDLING,
+                undefined,
+                this,
                 0,
                 [[Professions.ANIMAL_HANDLING, 10]]);
             huntingTask.location = this;
@@ -262,6 +282,8 @@ const pieces = {
     settlement: new Settlement("Settlement"),
     forester: new Location("Forester"),
     init(){
+        this.settlement.addTask(this.settlement.createOverseeTask(Professions.AGRICULTURE));
+        this.settlement.addTask(this.settlement.createOverseeTask(Professions.ANIMAL_HANDLING));
         this.settlement.addBuilding(this.forester);
     }
 }
@@ -270,8 +292,8 @@ pieces.init();
 const core = {
     generate: {
         citizen(settlement){
-            const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael"];
-            const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith"];
+            const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael","Constantin"];
+            const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith","Frederica","Rebecca"];
             const profession = ProfessionsArray[Math.floor(Math.random() * ProfessionsArray.length)];
 
             let name = "";
@@ -299,27 +321,29 @@ const core = {
     },
     addTask:{
         gathering(){
-            pieces.settlement.tasks.push(pieces.settlement.createTaskGatheringFood());
-            pieces.settlement.tasks.push(pieces.settlement.createTaskGatheringWood());
+            pieces.settlement.addTask(pieces.settlement.createTaskGatheringFood());
+            pieces.settlement.addTask(pieces.settlement.createTaskGatheringWood());
         },
         hunting(){
-            pieces.settlement.tasks.push(pieces.settlement.createTaskHunting());
+            pieces.settlement.addTask(pieces.settlement.createTaskHunting());
         },
-        foresting(){
-            const Foresting = new Task("Foresting",
+        foresting(location){
+            const forestingTask = new Task("Foresting",
                 20,
                 Professions.AGRICULTURE,
+                undefined,
+                location,
                 2,
                 [[Professions.AGRICULTURE, 20],[Professions.CONSTRUCTION,5]]);
-            Foresting.location = pieces.forester;
-            pieces.forester.tasks.push(Foresting);
+            forestingTask.location = pieces.forester;
+            pieces.forester.addTask(forestingTask);
         },
         random(amount){
             for (let i = 0; i < amount; i++) {
                 let rnd = Math.random();
                 if(rnd<0.6) { this.gathering()}
                 else if(rnd<0.8) { this.hunting()}
-                else {this.foresting()}
+                else {this.foresting(pieces.forester)}
             }
         }
     }
@@ -401,7 +425,7 @@ function createLocationView(location){
 // ------------------ start Game ----------------
 
 function main(){
-    const timePerTick = 0.8;
+    const timePerTick = 1;
     letCitizensWork(timePerTick);
     updateSettlementView();
 }
