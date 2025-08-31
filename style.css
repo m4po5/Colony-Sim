@@ -59,6 +59,10 @@ body {
     top:0;
     left:0;
     white-space: nowrap;
+    overflow:hidden;
+}
+.task .progressbar.todo {
+    visibility:hidden;
 }
 .task .progressbar.inProgress {
     background-color:blue;

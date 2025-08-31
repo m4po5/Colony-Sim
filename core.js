@@ -5,10 +5,10 @@ const Professions = Object.freeze({
     ANIMAL_HANDLING: ProfessionsArray[2]
 })
 
-function Task(name, timeToComplete, profession, workCall, location,minLevelRequired, expYield){
+function Task(name, ticksToComplete, profession, workCall, location,minLevelRequired, expYield){
     this.name = name;
-    this.timeToComplete = timeToComplete;
-    this.timeLeft = timeToComplete;
+    this.ticksToComplete = ticksToComplete;
+    this.ticksDone = 0;
     this.profession = profession;
     this.workCall = workCall;
     this.location = location;
@@ -19,30 +19,30 @@ function Task(name, timeToComplete, profession, workCall, location,minLevelRequi
     this.perpetual = false;
     this.assignee = undefined;
     this.location = location;
-    this.work = function(time){
-        let timeLeft = this.investTime(time);
+    this.work = function(){
+        this.progress();
         if(this.done && typeof this.workCall === "function"){
-            if (this.perpetual === true){
-                this.done = false;
-                this.timeLeft = this.timeToComplete;
-            }
             this.workCall();
+            if (this.perpetual === true){
+                this.reset();
+            }
         }
-        return timeLeft;
     };
-    this.investTime = function(time){
+    this.progress = function(){
         if(this.done){
-            return time;
+            return;
         }
-        this.timeLeft -= time;
-        if (this.timeLeft > 0){
-            this.status = "In Progress"
-            return 0;
-        } else {
+        this.ticksDone += 1;
+        this.status = "In Progress"
+        if (this.ticksDone === this.ticksToComplete){
             this.status = "Done"
             this.done = true;
-            return -this.timeLeft;
         }
+    }
+    this.reset = function(){
+        this.ticksDone = 0;
+        this.done = false;
+        this.status = "ToDo";
     }
 }
 
@@ -106,14 +106,13 @@ function Citizen(name, profession, settlement){
     this.unAssignTask = function(task){
         this.tasks = this.tasks.filter(t => t !== filter)
     }
-    this.workForDuration = function(time){
-        let timeLeft = time;
+    this.tick = function(){
         
-        while(timeLeft > 0 && this.tasks.length != 0){
-            timeLeft = this.tasks[0].work(timeLeft);
+        if (this.tasks.length != 0){
+            this.tasks[0].work();
             this.tasks = this.tasks.filter(el => !el.done);
         }
-        if (timeLeft > 0){
+        else {
             let availableLocations = this.settlement.getLocationsByProfession(this.profession);
 
             if (availableLocations.length !== 0){
@@ -123,7 +122,7 @@ function Citizen(name, profession, settlement){
                     this.planSeekWorkTask(loc);
                 })
 
-                this.workForDuration(timeLeft);
+                this.tick();
             }
         }
     };
@@ -140,12 +139,12 @@ function Citizen(name, profession, settlement){
         }
     }
     this.createSeekWorkTask = function(location){
-        return new Task("Seeking Work",20,this.profession,this.seekWorkCall,location,0);
+        return new Task("Seeking Work",100,this.profession,this.seekWorkCall,location,0);
     }
     this.createIdleTask = function(){
-        let idleTypes = ["Stargazing","Strolling","Picking Flowers","Watching People Work"];
+        let idleTypes = ["Stargazing","Strolling","Picking Flowers","Watching People Work","Whistling a tune"];
         let idleType = idleTypes[Math.floor(Math.random() * idleTypes.length)];
-        return new Task(idleType,6);
+        return new Task(idleType,60);
     }
     this.planSeekWorkTask = function(location,unshift){
         this.assignTask(this.createSeekWorkTask(location,unshift));
@@ -220,12 +219,12 @@ function Settlement(name){
         return locations.sort((a,b) => b.minLevelRequired() - a.minLevelRequired());
     };
     this.createOverseeTask = function(profession){
-        let task = new Task("Overseeing "+profession,5,profession,this.overseeingWorkCall,this,0)
+        let task = new Task("Overseeing "+profession,20,profession,this.overseeingWorkCall,this,0)
         task.perpetual = true;
         return task;
     };
     this.overseeingWorkCall = function(){
-        let tasksDone = this.location.tasksDone(this.profession);
+        let tasksDone = this.location.tasksDone(this.profession).filter(t => t!==this);
         let taskToPlan = undefined;
         let ass = this.assignee;
         let workTask = undefined;
@@ -329,7 +328,7 @@ const core = {
         },
         foresting(location){
             const forestingTask = new Task("Foresting",
-                20,
+                80,
                 Professions.AGRICULTURE,
                 undefined,
                 location,
@@ -353,11 +352,6 @@ core.generate.citizens(7,pieces.settlement);
 pieces.settlement.citizens.forEach(cit => {if(cit.profession === Professions.CONSTRUCTION){cit.profession = Professions.AGRICULTURE}});
 
 // ----------- Game View and Main Coil ---------
-
-$(document).ready(function(Settlement){
-    updateSettlementView();
-  // jQuery methods go here...
-}); 
 
 function updateSettlementView(){
     $("#Settlement").empty();
@@ -401,7 +395,7 @@ function createLocationView(location){
         html += `<div class="task"><div class="progress">`+task.name+`<div class="progressbar `;
         switch (task.status){
             case "In Progress":
-                let progress = 1-task.timeLeft/task.timeToComplete;
+                let progress = task.ticksDone/task.ticksToComplete;
                 html += `inProgress" style="width:`+ progress*100 +`%">`;
                 break
             case "Done":
@@ -424,33 +418,70 @@ function createLocationView(location){
 
 // ------------------ start Game ----------------
 
-function main(){
-    const timePerTick = 1;
-    letCitizensWork(timePerTick);
-    updateSettlementView();
-}
-function letCitizensWork(time){
-    pieces.settlement.citizens.forEach(citizen => {
-        citizen.workForDuration(time);
-    })
-}
-
-const game={
-    mainInterval: undefined,
-    playing: false,
+const ColonySim = {
+    requestMainAnimationFrame: undefined,
+    stopMain() { window.cancelAnimationFrame(ColonySim.requestMainAnimationFrame); },
+    lastTick: window.performance.now(),
+    tickLength: 100,
+    lastRender: window.performance.now(),
+    frameLength: 50,
+    isPlaying: false,
     play(){
-        this.mainInterval=setInterval(main,400);
-        this.playing=true;
+        this.lasTick = this.lastRender = window.performance.now();
+        this.isPlaying=true;
     },
     pause(){
-        clearInterval(this.mainInterval)
-        this.playing=false;
+        this.isPlaying=false;
     },
     playToggle(){
-        if(this.playing){
+        if(this.isPlaying){
             this.pause();
         } else {
             this.play();
         }
-    }
+    },
+    update(){
+        if(ColonySim.isPlaying){
+            this.citizensTick();
+        }
+    },
+    citizensTick(){
+        pieces.settlement.citizens.forEach(citizen => {
+            citizen.tick();
+        })
 }
+}
+
+// inspiration from source: https://developer.mozilla.org/en-US/docs/Games/Anatomy#building_a_main_loop_in_javascript
+; (() => {
+    function main(tFrame) {
+        ColonySim.requestMainAnimationFrame = window.requestAnimationFrame(main);
+        
+        const nextTick = ColonySim.lastTick + ColonySim.tickLength;
+        let numTicks = 0;
+        if (tFrame > nextTick) {
+            const timeSinceTick = tFrame - ColonySim.lastTick;
+            numTicks = Math.floor(timeSinceTick / ColonySim.tickLength);
+        }
+
+        queueUpdates(numTicks);
+        
+        const timeSinceRender = tFrame - ColonySim.lastRender
+        if(timeSinceRender > ColonySim.frameLength){
+            updateSettlementView();
+            ColonySim.lastRender = tFrame;
+        }
+    }
+
+    function queueUpdates(numTicks) {
+        for (let i = 0; i < numTicks; i++) {
+            ColonySim.lastTick += ColonySim.tickLength;
+            ColonySim.update(ColonySim.lastTick);
+        }
+    }
+    ColonySim.lastTick = performance.now();
+    ColonySim.lastRender = ColonySim.lastTick;
+    ColonySim.tickLength = 100;
+    //setInitialState();//Performs whatever tasks are leftover before the main loop must run. My game Setup.
+    main(); // Start the cycle
+})();
