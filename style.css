@@ -19,7 +19,7 @@ body {
     display:grid;
 }
 
-.citizens {
+#citizens {
     background-color:violet;
     box-sizing: border-box;
     border: 1px solid black;
@@ -45,7 +45,7 @@ body {
     padding-right:5px;
 }
 
-.locations{
+#locations{
     display:grid;
     box-sizing: border-box;
     float: left;

@@ -99,6 +99,8 @@ function Location(name,storage){
 }
 
 function Citizen(name, profession, settlement){
+    Citizen.numInstances = (Citizen.numInstances || 0) + 1;
+    this.citId = Citizen.numInstances;
     this.name = "J. Doe";
     if (name !== undefined){
         this.name = name;
@@ -408,22 +410,16 @@ pieces.settlement.citizens.forEach(cit => {if(cit.profession === Professions.CON
 // ----------- Game View and Main Coil ---------
 
 function updateSettlementView(){
-    $("#Settlement").empty();
 
     updateStorage();
+    updateCitizensView()
 
-    const citizensView = $(`<div class="citizens"></div>`);
-    pieces.settlement.citizens.forEach(citizen => {
-        citizensView.append(createCitizenView(citizen));
-    })
-    $("#Settlement").append(citizensView);
-
-    const locationsView = $(`<div class="locations"></div>`);
+    const locationsView = $(`#locations`);
+    $(locationsView).empty();
     locationsView.append(createLocationView(pieces.settlement));
     pieces.settlement.buildings.forEach(location => {
         locationsView.append(createLocationView(location));
     })
-    $("#Settlement").append(locationsView);
 }
 
 function updateStorage(){
@@ -431,8 +427,52 @@ function updateStorage(){
     $("#food").text(pieces.settlement.storage.stored.food);
 }
 
+const View={
+    citizens:[]
+}
+
+function updateCitizensView(){
+    const citizensView = $("#citizens");
+
+    function updateViewCitizensPairs(citizensView) {
+        const citizens = pieces.settlement.citizens;
+        if (View.citizens.length === 0 && citizens != 0) {
+                createCitizenViewPair(citizensView,citizens[0]);
+        }
+        pieces.settlement.citizens.forEach(citizen => {
+            if (View.citizens.filter(vc => vc.citizenData === citizen).length === 0) {
+                createCitizenViewPair(citizensView,citizen);
+            }
+        });
+        function createCitizenViewPair(citizensView,citizen) {
+            const citView = createCitizenView(citizen);
+            View.citizens.push({ citizenData: citizen, viewId: "#citizenId"+citizen.citId });
+            citizensView.append(citView);
+        }
+        View.citizens.forEach(vc => {
+            if(pieces.settlement.citizens.filter(cit => cit === vc.citizenData).length === 0){
+                $(vc.viewId).remove();
+                const index = View.citizens.indexOf(vc);
+                if(index > -1){
+                    View.citizens.splice(index,1);
+                }
+            }
+        });
+    };
+    updateViewCitizensPairs(citizensView)
+    
+    // update displayed data
+    View.citizens.forEach((vc) => {
+        const taskText = "idling";
+        if(vc.citizenData.tasks.length > 0){
+            $(vc.viewId).children(".task").text(vc.citizenData.tasks[0].name);
+        }
+        $(vc.view).children(".task").text(taskText)
+    });
+}
+
 function createCitizenView(citizen){
-    let html = `<div class="citizen">`;
+    let html = `<div id="citizenId`+citizen.citId+`" class="citizen">`;
     html += `<div class="name">`+citizen.name+`</div>`;
     html += `<div class="profession">`+citizen.profession+`</div>`;
 
@@ -485,7 +525,7 @@ const ColonySim = {
     lastTick: window.performance.now(),
     tickLength: 100,
     lastRender: window.performance.now(),
-    frameLength: 50,
+    frameLength: 30,
     isPlaying: false,
     play(){
         this.lasTick = this.lastRender = window.performance.now();
