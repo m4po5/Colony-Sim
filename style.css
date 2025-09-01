@@ -2,6 +2,19 @@ body {
     background-color:burlywood;
 }
 
+.menubar {
+    width:100%;
+}
+
+.menubar .button{
+    float:left;
+}
+
+.menubar .storage{
+    float:right;
+    padding-left:5pt;
+}
+
 #settlement {
     display:grid;
 }

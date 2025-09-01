@@ -46,8 +46,19 @@ function Task(name, ticksToComplete, profession, workCall, location,minLevelRequ
     }
 }
 
-function Location(name){
+const Wares= Object.freeze({wood:"Wood",food:"Food"});
+
+function csStorage(){
+    this.wares = Wares;
+    this.accepts = {wood:false,food:false};
+    this.maxStorage = {wood:50,food:50}
+    this.stored = {wood:0,food:0};
+    this.upgrades = {sheltered: false}
+}
+
+function Location(name,storage){
     this.name = name;
+    this.storage = storage;
     this.tasks = [];
     this.tasksOverview = () => { return [{}]};
     this.minLevelRequired = function(){
@@ -80,7 +91,7 @@ function Location(name){
         tasksOverview.forEach(task => {
             const runningTask = runningTasks.filter(rTask => rTask.name===task.name);
             if (runningTask.length<task.max){
-                taskToPlan=task.call();
+                taskToPlan=task.call(this);
             }
         })
         return taskToPlan;
@@ -139,7 +150,7 @@ function Citizen(name, profession, settlement){
         }
     }
     this.createSeekWorkTask = function(location){
-        return new Task("Seeking Work",100,this.profession,this.seekWorkCall,location,0);
+        return new Task("Seeking Work",30,this.profession,this.seekWorkCall,location,0);
     }
     this.createIdleTask = function(){
         let idleTypes = ["Stargazing","Strolling","Picking Flowers","Watching People Work","Whistling a tune"];
@@ -155,8 +166,8 @@ function Citizen(name, profession, settlement){
     }
 }
 
-function Settlement(name){
-    Location.call(this,name);
+function Settlement(name, storage){
+    Location.call(this,name, storage);
     this.tasks = [];
     this.citizens = [];
     this.buildings = [];
@@ -219,7 +230,12 @@ function Settlement(name){
         return locations.sort((a,b) => b.minLevelRequired() - a.minLevelRequired());
     };
     this.createOverseeTask = function(profession){
-        let task = new Task("Overseeing "+profession,20,profession,this.overseeingWorkCall,this,0)
+        let task = new Task("Overseeing "+profession,
+            10,
+            profession,
+            this.overseeingWorkCall,
+            this,
+            0)
         task.perpetual = true;
         return task;
     };
@@ -228,48 +244,75 @@ function Settlement(name){
         let taskToPlan = undefined;
         let ass = this.assignee;
         let workTask = undefined;
-        if(tasksDone.length > 0){
-            this.location.removeTask(tasksDone[0]);
-        } else if ((taskToPlan = this.location.findTaskToPlan(this.profession))!==undefined){
+        if ((taskToPlan = this.location.findTaskToPlan(this.profession))!==undefined){
             this.location.tasks.push(taskToPlan);
+        } else if(tasksDone.length > 0){
+            this.location.removeTask(tasksDone[0]);
         } else if((workTask=this.location.tasks.filter(t => t.profession === ass.profession && t.assignee === undefined)[0]) !== undefined){
             ass.assignTask(workTask,true);
         } else {
             ass.planIdleTask(true);
         }
     };
-    this.createTaskGatheringWood = function(){
-            const gatheringWoodTask = new Task("Gathering Wood",
-                40,
-                Professions.AGRICULTURE,
-                undefined,
-                this,
-                0,
-                [[Professions.AGRICULTURE, 10]]);
-            gatheringWoodTask.location = this;
-            return gatheringWoodTask;
+    this.createTaskGatheringWood = function(location){
+        const gatheringWoodTask = new Task("Gathering Wood",
+            60,
+            Professions.AGRICULTURE,
+            location.gatheringWoodWorkCall,
+            location,
+            0,
+            [[Professions.AGRICULTURE, 10]]);
+        return gatheringWoodTask;
     };
-    this.createTaskGatheringFood = function(){
-            const gatheringFoodTask = new Task("Gathering Food",
-                30,
-                Professions.AGRICULTURE,
-                undefined,
-                this,
-                0,
-                [[Professions.AGRICULTURE, 10]]);
-            gatheringFoodTask.location = this;
-            return gatheringFoodTask;
+    this.gatheringWoodWorkCall = function(){
+        const woodGathered = 5;
+        const storage = this.location.storage;
+        const capacity = storage.maxStorage.wood - storage.stored.wood;
+        if(capacity < woodGathered){
+            storage.stored.wood = storage.maxStorage.wood;
+        } else {
+            storage.stored.wood += woodGathered;
+        }
     };
-    this.createTaskHunting = function(){
-            const huntingTask = new Task("Hunting",
-                60,
-                Professions.ANIMAL_HANDLING,
-                undefined,
-                this,
-                0,
-                [[Professions.ANIMAL_HANDLING, 10]]);
-            huntingTask.location = this;
-            return huntingTask;
+    this.createTaskGatheringFood = function(location){
+        const gatheringFoodTask = new Task("Gathering Food",
+            50,
+            Professions.AGRICULTURE,
+            location.gatheringFoodWorkCall,
+            location,
+            0,
+            [[Professions.AGRICULTURE, 10]]);
+        return gatheringFoodTask;
+    };
+    this.gatheringFoodWorkCall = function(){
+        const foodGathered = 5;
+        const storage = this.location.storage;
+        const capacity = storage.maxStorage.food - storage.stored.food;
+        if(capacity < foodGathered){
+            storage.stored.food = storage.maxStorage.food;
+        } else {
+            storage.stored.food += foodGathered;
+        }
+    };
+    this.createTaskHunting = function(location){
+        const huntingTask = new Task("Hunting",
+            120,
+            Professions.ANIMAL_HANDLING,
+            location.huntingWorkCall,
+            location,
+            0,
+            [[Professions.ANIMAL_HANDLING, 10]]);
+        return huntingTask;
+    };
+    this.huntingWorkCall = function(){
+        const foodGathered = 15;
+        const storage = this.location.storage;
+        const capacity = storage.maxStorage.food - storage.stored.food;
+        if(capacity < foodGathered){
+            storage.stored.food = storage.maxStorage.food;
+        } else {
+            storage.stored.food += foodGathered;
+        }
     }
 }
 Settlement.prototype = Object.create(Location.prototype);//Inherits methods
@@ -278,12 +321,23 @@ Settlement.prototype.constructor = Settlement;
 //-------------- Presets --------------
 
 const pieces = {
-    settlement: new Settlement("Settlement"),
+    settlement: undefined,
     forester: new Location("Forester"),
     init(){
+        this.settlement = new Settlement("Settlement", this.getSettlementStorage());
         this.settlement.addTask(this.settlement.createOverseeTask(Professions.AGRICULTURE));
         this.settlement.addTask(this.settlement.createOverseeTask(Professions.ANIMAL_HANDLING));
         this.settlement.addBuilding(this.forester);
+    },
+    getSettlementStorage(){
+        const storage = new csStorage();
+        storage.accepts.food=true;
+        storage.accepts.wood=true;
+
+        storage.maxStorage.food = 100;
+        storage.maxStorage.wood =100;
+
+        return storage;
     }
 }
 pieces.init();
@@ -356,6 +410,8 @@ pieces.settlement.citizens.forEach(cit => {if(cit.profession === Professions.CON
 function updateSettlementView(){
     $("#Settlement").empty();
 
+    updateStorage();
+
     const citizensView = $(`<div class="citizens"></div>`);
     pieces.settlement.citizens.forEach(citizen => {
         citizensView.append(createCitizenView(citizen));
@@ -368,6 +424,11 @@ function updateSettlementView(){
         locationsView.append(createLocationView(location));
     })
     $("#Settlement").append(locationsView);
+}
+
+function updateStorage(){
+    $("#wood").text(pieces.settlement.storage.stored.wood);
+    $("#food").text(pieces.settlement.storage.stored.food);
 }
 
 function createCitizenView(citizen){
