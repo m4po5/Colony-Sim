@@ -59,7 +59,12 @@ function csStorage(){
 function Location(name,storage){
     this.name = name;
     this.storage = storage;
-    this.tasks = [];
+    this.taskManagement = new Location.TaskManagement(this);
+}
+
+Location.TaskManagement = function TaskManagement(location){
+    this.location = location;
+    this.tasks= [];
     this.tasksOverview = () => { return [{}]};
     this.minLevelRequired = function(){
         let minLevel = 10;
@@ -91,10 +96,13 @@ function Location(name,storage){
         tasksOverview.forEach(task => {
             const runningTask = runningTasks.filter(rTask => rTask.name===task.name);
             if (runningTask.length<task.max){
-                taskToPlan=task.call(this);
+                taskToPlan=task.call(this.location);
             }
         })
         return taskToPlan;
+    };
+    this.getAvailableTasksFor = function(profession){
+        return this.tasks.filter(task => task.assignee === undefined && task.profession === profession && !task.done);
     };
 }
 
@@ -139,21 +147,18 @@ function Citizen(name, profession, settlement){
             }
         }
     };
+    this.createSeekWorkTask = function(location){
+        return new Task("Seeking Work",30,this.profession,this.seekWorkCall,location,0);
+    };
     this.seekWorkCall = function(){
         let citizen = this.assignee;
         let availableTask = undefined;
-        this.location.tasks.forEach(task => {
-            if (task.assignee === undefined && task.profession === citizen.profession && !task.done && availableTask === undefined){
-                availableTask = task;
-            }
-        })
-        if (availableTask !== undefined){
-            citizen.assignTask(availableTask);
+
+        availableTask = this.location.taskManagement.getAvailableTasksFor(this.profession);
+        if (availableTask.length > 0){
+            citizen.assignTask(availableTask[0]);
         }
-    }
-    this.createSeekWorkTask = function(location){
-        return new Task("Seeking Work",30,this.profession,this.seekWorkCall,location,0);
-    }
+    };
     this.createIdleTask = function(){
         let idleTypes = ["Stargazing","Strolling","Picking Flowers","Watching People Work","Whistling a tune"];
         let idleType = idleTypes[Math.floor(Math.random() * idleTypes.length)];
@@ -170,30 +175,9 @@ function Citizen(name, profession, settlement){
 
 function Settlement(name, storage){
     Location.call(this,name, storage);
-    this.tasks = [];
+    this.taskManagement = new Settlement.TaskManagement(this);
     this.citizens = [];
     this.buildings = [];
-    this.tasksOverview = function(){
-        const gatheringWoodTask = {
-            name:"Gathering Wood",
-            profession:Professions.AGRICULTURE,
-            max:3,
-            call:this.createTaskGatheringWood
-        };
-        const gatheringFoodTask = {
-            name:"Gathering Food",
-            profession:Professions.AGRICULTURE,
-            max:4,
-            call:this.createTaskGatheringFood
-        }
-        const huntingTask = {
-            name:"Hunting",
-            profession:Professions.ANIMAL_HANDLING,
-            max:2,
-            call:this.createTaskHunting
-        }
-        return [gatheringWoodTask,gatheringFoodTask,huntingTask];
-    };
     this.addCitizen = function(citizen){
         if(citizen instanceof Citizen){
             this.citizens.push(citizen);   
@@ -221,7 +205,7 @@ function Settlement(name, storage){
     };
     this.locationOfProfession = function(location,profession){
         let result = false;
-        location.tasks.forEach(task => {
+        location.taskManagement.tasks.forEach(task => {
             if(task.profession === profession){
                 result = true;
             }
@@ -229,43 +213,73 @@ function Settlement(name, storage){
         return result;
     };
     this.sortLocationByMinLevelRequired = function(locations){
-        return locations.sort((a,b) => b.minLevelRequired() - a.minLevelRequired());
+        return locations.sort((a,b) => b.taskManagement.minLevelRequired() - a.taskManagement.minLevelRequired());
+    };
+}
+Settlement.prototype = Object.create(Location.prototype);//Inherits methods
+Settlement.prototype.constructor = Settlement;
+
+Settlement.TaskManagement = function TaskManagement(location){
+    Location.TaskManagement.call(this,location);
+    this.tasks = [];
+    this.tasksOverview = function(){
+    const gatheringWoodTask = {
+        name:"Gathering Wood",
+        profession:Professions.AGRICULTURE,
+        max:3,
+        call:this.createTaskGatheringWood
+    };
+    const gatheringFoodTask = {
+        name:"Gathering Food",
+        profession:Professions.AGRICULTURE,
+        max:4,
+        call:this.createTaskGatheringFood
+    }
+    const huntingTask = {
+        name:"Hunting",
+        profession:Professions.ANIMAL_HANDLING,
+        max:2,
+        call:this.createTaskHunting
+    }
+    return [gatheringWoodTask,gatheringFoodTask,huntingTask];
     };
     this.createOverseeTask = function(profession){
         let task = new Task("Overseeing "+profession,
             10,
             profession,
             this.overseeingWorkCall,
-            this,
+            this.location,
             0)
         task.perpetual = true;
         return task;
     };
     this.overseeingWorkCall = function(){
-        let tasksDone = this.location.tasksDone(this.profession).filter(t => t!==this);
+        let tasksDone = this.location.taskManagement.tasksDone(this.profession).filter(t => t!==this);
         let taskToPlan = undefined;
         let ass = this.assignee;
         let workTask = undefined;
-        if ((taskToPlan = this.location.findTaskToPlan(this.profession))!==undefined){
-            this.location.tasks.push(taskToPlan);
+        if ((taskToPlan = this.location.taskManagement.findTaskToPlan(this.profession))!==undefined){
+            this.location.taskManagement.addTask(taskToPlan);
         } else if(tasksDone.length > 0){
-            this.location.removeTask(tasksDone[0]);
-        } else if((workTask=this.location.tasks.filter(t => t.profession === ass.profession && t.assignee === undefined)[0]) !== undefined){
+            this.location.taskManagement.removeTask(tasksDone[0]);
+        } else if((workTask=this.location.taskManagement.tasks.filter(t => t.profession === ass.profession && t.assignee === undefined)[0]) !== undefined){
             ass.assignTask(workTask,true);
         } else {
             ass.planIdleTask(true);
         }
     };
+    // Called within taskOverview object.
     this.createTaskGatheringWood = function(location){
         const gatheringWoodTask = new Task("Gathering Wood",
             60,
             Professions.AGRICULTURE,
-            location.gatheringWoodWorkCall,
+            location.taskManagement.gatheringWoodWorkCall,
             location,
             0,
             [[Professions.AGRICULTURE, 10]]);
         return gatheringWoodTask;
     };
+    // Called within Task object
     this.gatheringWoodWorkCall = function(){
         const woodGathered = 5;
         const storage = this.location.storage;
@@ -280,7 +294,7 @@ function Settlement(name, storage){
         const gatheringFoodTask = new Task("Gathering Food",
             50,
             Professions.AGRICULTURE,
-            location.gatheringFoodWorkCall,
+            location.taskManagement.gatheringFoodWorkCall,
             location,
             0,
             [[Professions.AGRICULTURE, 10]]);
@@ -300,7 +314,7 @@ function Settlement(name, storage){
         const huntingTask = new Task("Hunting",
             120,
             Professions.ANIMAL_HANDLING,
-            location.huntingWorkCall,
+            location.taskManagement.huntingWorkCall,
             location,
             0,
             [[Professions.ANIMAL_HANDLING, 10]]);
@@ -315,10 +329,10 @@ function Settlement(name, storage){
         } else {
             storage.stored.food += foodGathered;
         }
-    }
-}
-Settlement.prototype = Object.create(Location.prototype);//Inherits methods
-Settlement.prototype.constructor = Settlement;
+    };
+};
+Location.TaskManagement.prototype = Object.create(Location.TaskManagement.prototype);
+Location.TaskManagement.prototype.constructor = Location.TaskManagement;
 
 //-------------- Presets --------------
 
@@ -327,8 +341,8 @@ const pieces = {
     forester: new Location("Forester"),
     init(){
         this.settlement = new Settlement("Settlement", this.getSettlementStorage());
-        this.settlement.addTask(this.settlement.createOverseeTask(Professions.AGRICULTURE));
-        this.settlement.addTask(this.settlement.createOverseeTask(Professions.ANIMAL_HANDLING));
+        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.AGRICULTURE));
+        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.ANIMAL_HANDLING));
         this.settlement.addBuilding(this.forester);
     },
     getSettlementStorage(){
@@ -492,7 +506,7 @@ function createLocationView(location){
     let html = `<div class="location">`;
     html += `<div class="name">`+location.name+`</div>`;
 
-    location.tasks.forEach(task =>{
+    location.taskManagement.tasks.forEach(task =>{
         html += `<div class="task"><div class="progress">`+task.name+`<div class="progressbar `;
         switch (task.status){
             case "In Progress":
