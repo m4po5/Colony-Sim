@@ -1,6 +1,6 @@
-const ProfessionsArray = Object.freeze(["Agriculture", "Construction", "Animal Handling"]);
+const ProfessionsArray = Object.freeze(["Hauling", "Construction", "Animal Handling"]);
 const Professions = Object.freeze({
-    AGRICULTURE: ProfessionsArray[0],
+    HAULING: ProfessionsArray[0],
     CONSTRUCTION: ProfessionsArray[1],
     ANIMAL_HANDLING: ProfessionsArray[2]
 })
@@ -94,9 +94,11 @@ Location.TaskManagement = function TaskManagement(location){
         const tasksOverview = this.tasksOverview().filter(task => task.profession===profession);
         const runningTasks = this.tasks.filter(t => t.profession === profession);
         tasksOverview.forEach(task => {
-            const runningTask = runningTasks.filter(rTask => rTask.name===task.name);
-            if (runningTask.length<task.max){
-                taskToPlan=task.call(this.location);
+            if(task.isNeeded(this.location)){
+                const runningTask = runningTasks.filter(rTask => rTask.name===task.name);
+                if (runningTask.length<task.max){
+                    taskToPlan=task.call(this.location);
+                }
             }
         })
         return taskToPlan;
@@ -225,20 +227,23 @@ Settlement.TaskManagement = function TaskManagement(location){
     this.tasksOverview = function(){
     const gatheringWoodTask = {
         name:"Gathering Wood",
-        profession:Professions.AGRICULTURE,
-        max:3,
+        profession:Professions.HAULING,
+        max:4,
+        isNeeded:this.isTaskGatheringWoodNeeded,
         call:this.createTaskGatheringWood
     };
     const gatheringFoodTask = {
         name:"Gathering Food",
-        profession:Professions.AGRICULTURE,
-        max:4,
+        profession:Professions.HAULING,
+        max:1,
+        isNeeded:this.isTaskGatheringFoodNeeded,
         call:this.createTaskGatheringFood
     }
     const huntingTask = {
         name:"Hunting",
         profession:Professions.ANIMAL_HANDLING,
-        max:2,
+        max:3,
+        isNeeded:this.isTaskHuntingNeeded,
         call:this.createTaskHunting
     }
     return [gatheringWoodTask,gatheringFoodTask,huntingTask];
@@ -269,50 +274,62 @@ Settlement.TaskManagement = function TaskManagement(location){
         }
     };
     // Called within taskOverview object.
+    this.isTaskGatheringWoodNeeded = function(location){
+        if (location.storage.stored.wood <= location.storage.maxStorage.wood){
+            return true;
+        } else {
+            return false;
+        }
+    };
+    // Called within taskOverview object.
     this.createTaskGatheringWood = function(location){
         const gatheringWoodTask = new Task("Gathering Wood",
-            60,
-            Professions.AGRICULTURE,
+            90,
+            Professions.HAULING,
             location.taskManagement.gatheringWoodWorkCall,
             location,
             0,
-            [[Professions.AGRICULTURE, 10]]);
+            [[Professions.HAULING, 10]]);
         return gatheringWoodTask;
     };
     // Called within Task object
     this.gatheringWoodWorkCall = function(){
-        const woodGathered = 5;
+        const woodGathered = 1 + Math.floor(Math.random() * 3);
         const storage = this.location.storage;
-        const capacity = storage.maxStorage.wood - storage.stored.wood;
-        if(capacity < woodGathered){
-            storage.stored.wood = storage.maxStorage.wood;
+        storage.stored.wood += woodGathered;
+    };
+    this.isTaskGatheringFoodNeeded = function(location){
+        if (location.storage.stored.food <= location.storage.maxStorage.food){
+            return true;
         } else {
-            storage.stored.wood += woodGathered;
+            return false;
         }
     };
     this.createTaskGatheringFood = function(location){
         const gatheringFoodTask = new Task("Gathering Food",
-            50,
-            Professions.AGRICULTURE,
+            60,
+            Professions.HAULING,
             location.taskManagement.gatheringFoodWorkCall,
             location,
             0,
-            [[Professions.AGRICULTURE, 10]]);
+            [[Professions.HAULING, 10]]);
         return gatheringFoodTask;
     };
     this.gatheringFoodWorkCall = function(){
-        const foodGathered = 5;
+        const foodGathered = 2 + Math.floor(Math.random() * 2);
         const storage = this.location.storage;
-        const capacity = storage.maxStorage.food - storage.stored.food;
-        if(capacity < foodGathered){
-            storage.stored.food = storage.maxStorage.food;
+        storage.stored.food += foodGathered;
+    };
+    this.isTaskHuntingNeeded = function(location){
+        if (location.storage.stored.food <= location.storage.maxStorage.food){
+            return true;
         } else {
-            storage.stored.food += foodGathered;
+            return false;
         }
     };
     this.createTaskHunting = function(location){
         const huntingTask = new Task("Hunting",
-            120,
+            300,
             Professions.ANIMAL_HANDLING,
             location.taskManagement.huntingWorkCall,
             location,
@@ -321,14 +338,9 @@ Settlement.TaskManagement = function TaskManagement(location){
         return huntingTask;
     };
     this.huntingWorkCall = function(){
-        const foodGathered = 15;
+        const foodGathered = 3 + Math.floor(Math.random() * 15);;
         const storage = this.location.storage;
-        const capacity = storage.maxStorage.food - storage.stored.food;
-        if(capacity < foodGathered){
-            storage.stored.food = storage.maxStorage.food;
-        } else {
-            storage.stored.food += foodGathered;
-        }
+        storage.stored.food += foodGathered;
     };
 };
 Location.TaskManagement.prototype = Object.create(Location.TaskManagement.prototype);
@@ -341,7 +353,7 @@ const pieces = {
     forester: new Location("Forester"),
     init(){
         this.settlement = new Settlement("Settlement", this.getSettlementStorage());
-        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.AGRICULTURE));
+        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.HAULING));
         this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.ANIMAL_HANDLING));
         this.settlement.addBuilding(this.forester);
     },
@@ -358,68 +370,38 @@ const pieces = {
 }
 pieces.init();
 
-const core = {
-    generate: {
-        citizen(settlement){
-            const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael","Constantin"];
-            const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith","Frederica","Rebecca"];
-            const profession = ProfessionsArray[Math.floor(Math.random() * ProfessionsArray.length)];
+const Generator = {
+    citizen(settlement){
+        const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael","Constantin"];
+        const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith","Frederica","Rebecca"];
+        const profession = ProfessionsArray[Math.floor(Math.random() * ProfessionsArray.length)];
 
-            let name = "";
+        let name = "";
 
-            if (Math.random() > 0.5){
-                name = mFirst[Math.floor(Math.random() * mFirst.length)]
-            } else {
-                name = wFirst[Math.floor(Math.random() * wFirst.length)]
-            }
-
-            let citizen = new Citizen(name, profession, settlement);
-            settlement.addCitizen(citizen);
-            return citizen;
-        },
-        citizens(amount,settlement){
-            if (amount === undefined){
-                return [];
-            }
-            const citizens = [];
-            for (let i = 0; i < amount; i++) {
-                citizens.push(this.citizen(settlement));
-            }
-            return citizens;
+        if (Math.random() > 0.5){
+            name = mFirst[Math.floor(Math.random() * mFirst.length)]
+        } else {
+            name = wFirst[Math.floor(Math.random() * wFirst.length)]
         }
+
+        let citizen = new Citizen(name, profession, settlement);
+        settlement.addCitizen(citizen);
+        return citizen;
     },
-    addTask:{
-        gathering(){
-            pieces.settlement.addTask(pieces.settlement.createTaskGatheringFood());
-            pieces.settlement.addTask(pieces.settlement.createTaskGatheringWood());
-        },
-        hunting(){
-            pieces.settlement.addTask(pieces.settlement.createTaskHunting());
-        },
-        foresting(location){
-            const forestingTask = new Task("Foresting",
-                80,
-                Professions.AGRICULTURE,
-                undefined,
-                location,
-                2,
-                [[Professions.AGRICULTURE, 20],[Professions.CONSTRUCTION,5]]);
-            forestingTask.location = pieces.forester;
-            pieces.forester.addTask(forestingTask);
-        },
-        random(amount){
-            for (let i = 0; i < amount; i++) {
-                let rnd = Math.random();
-                if(rnd<0.6) { this.gathering()}
-                else if(rnd<0.8) { this.hunting()}
-                else {this.foresting(pieces.forester)}
-            }
+    citizens(amount,settlement){
+        if (amount === undefined){
+            return [];
         }
+        const citizens = [];
+        for (let i = 0; i < amount; i++) {
+            citizens.push(this.citizen(settlement));
+        }
+        return citizens;
     }
-}
+};
 
-core.generate.citizens(7,pieces.settlement);
-pieces.settlement.citizens.forEach(cit => {if(cit.profession === Professions.CONSTRUCTION){cit.profession = Professions.AGRICULTURE}});
+Generator.citizens(7,pieces.settlement);
+pieces.settlement.citizens.forEach(cit => {if(cit.profession === Professions.CONSTRUCTION){cit.profession = Professions.HAULING}});
 
 // ----------- Game View and Main Coil ---------
 
