@@ -53,7 +53,6 @@ function csStorage(){
     this.accepts = {wood:false,food:false};
     this.maxStorage = {wood:50,food:50}
     this.stored = {wood:0,food:0};
-    this.upgrades = {sheltered: false}
 }
 
 function Location(name,storage){
@@ -89,7 +88,7 @@ Location.TaskManagement = function TaskManagement(location){
         const tasksDone = this.tasks.filter(t => t.profession === profession && t.done)
         return tasksDone;
     };
-    this.findTaskToPlan = function(profession){
+    this.getTaskToPlan = function(profession){
         let taskToPlan = undefined;
         const tasksOverview = this.tasksOverview().filter(task => task.profession===profession);
         const runningTasks = this.tasks.filter(t => t.profession === profession);
@@ -103,6 +102,17 @@ Location.TaskManagement = function TaskManagement(location){
         })
         return taskToPlan;
     };
+    this.getSurplusTasks = function(profession){
+        const surplusTasks = [];
+        const tasksOverview = this.tasksOverview().filter(task => task.profession===profession);
+        const runningTasks = this.tasks.filter(t => t.profession === profession);
+        tasksOverview.forEach(t => {
+            if (!t.isNeeded(this.location)){
+                surplusTasks.push(...runningTasks.filter(r => r.name === t.name));
+            };
+        });
+        return surplusTasks;
+    },
     this.getAvailableTasksFor = function(profession){
         return this.tasks.filter(task => task.assignee === undefined && task.profession === profession && !task.done);
     };
@@ -154,11 +164,11 @@ function Citizen(name, profession, settlement){
     };
     this.seekWorkCall = function(){
         let citizen = this.assignee;
-        let availableTask = undefined;
+        let availableTasks = undefined;
 
-        availableTask = this.location.taskManagement.getAvailableTasksFor(this.profession);
-        if (availableTask.length > 0){
-            citizen.assignTask(availableTask[0]);
+        availableTasks = this.location.taskManagement.getAvailableTasksFor(this.profession);
+        if (availableTasks.length > 0){
+            citizen.assignTask(availableTasks[0]);
         }
     };
     this.createIdleTask = function(){
@@ -260,10 +270,13 @@ Settlement.TaskManagement = function TaskManagement(location){
     };
     this.overseeingWorkCall = function(){
         let tasksDone = this.location.taskManagement.tasksDone(this.profession).filter(t => t!==this);
+        let tasksToCancel = this.location.taskManagement.getSurplusTasks(this.profession);
         let taskToPlan = undefined;
         let ass = this.assignee;
         let workTask = undefined;
-        if ((taskToPlan = this.location.taskManagement.findTaskToPlan(this.profession))!==undefined){
+        if (tasksToCancel.length > 0){
+            this.location.taskManagement.removeTask(tasksToCancel[0]);
+        } else if ((taskToPlan = this.location.taskManagement.getTaskToPlan(this.profession))!==undefined){
             this.location.taskManagement.addTask(taskToPlan);
         } else if(tasksDone.length > 0){
             this.location.taskManagement.removeTask(tasksDone[0]);
