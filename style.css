@@ -1,5 +1,22 @@
+/* CSS HEX
+--tan: #deb887ff;
+--dark-purple: #231123ff;
+--amaranth-purple: #A63A50;
+--drab-dark-brown: #463F1A;
+--emerald: #35ce8dff;
+*/
+/* CSS HEX 
+--black-bean: #280003ff;
+--chocolate: #8b4000ff;
+--persian-orange: #de9151ff;
+--yellow-green: #bed558ff;
+--moss-green: #8b9556ff;
+
+--platinum: #e5e4e2ff;
+*/
 body {
     background-color:burlywood;
+    color: #280003ff;
 }
 
 .menubar {
@@ -20,29 +37,64 @@ body {
 }
 
 #citizens {
-    background-color:violet;
+    background-color: #463F1A;
     box-sizing: border-box;
-    border: 1px solid black;
     float:left;
-    height:100pt;
+    max-height: 80pt;
     overflow:scroll;
     width:100%;
 }
 .citizen {
-    float:left;
-    display: inline;
-    padding:5px;
+    display:inline-block;
+    background-color:#8b4000ff;
+    color: #de9151ff;
+    font-family:'Franklin Gothic Medium';
     font-size:small;
+    margin:1.5pt;
+    width:127pt;
 }
-.citizen .name {
-    background-color:aliceblue;
-    padding:2px;
+.citizen .citIcon{
+    float:left;
+    background-color: #de9151ff;
+    margin:4pt;
+    height:25pt;
+    width:25pt;
+}
+.citizen .nameplate{
+    display:grid;
+    margin:1pt;
+    padding:1.5pt;
+}
+.nameplate .name {
     font-weight:bold;
 }
-.citizen .profession {
-    background-color:aquamarine;
-    padding-left:5px;
-    padding-right:5px;
+
+.nameplate .task {
+    border: 1px solid #280003ff;
+    background-color:#280003ff;
+    color:#bed558ff;
+    font-size:smaller;
+    font-weight:bold;
+    white-space: nowrap;
+    overflow:hidden;
+    width:100%;
+}
+.progress{
+    position:relative;
+    padding-left:2pt;
+}
+.progress .progressbar{
+    position:absolute;
+    top:0;
+    left:0;
+    white-space: nowrap;
+    overflow:hidden;
+    padding-left:2pt;
+    background-color:#8b9556ff;
+    color:#280003ff;
+}
+.progress .progressbar.todo {
+    visibility:hidden;
 }
 
 #locations{
@@ -63,26 +115,4 @@ body {
     color:white;
     padding-left:5px;
     padding-right:5px;
-}
-.task .progress{
-    position:relative;
-}
-.task .progressbar{
-    position:absolute;
-    top:0;
-    left:0;
-    white-space: nowrap;
-    overflow:hidden;
-}
-.task .progressbar.todo {
-    visibility:hidden;
-}
-.task .progressbar.inProgress {
-    background-color:blue;
-    color:white;
-}
-
-.task .progressbar.done {
-    background-color:green;
-    color:white;
 }
