@@ -9,7 +9,7 @@ function updateSettlementView(){
     const locationsView = $(`#locations`);
     $(locationsView).empty();
     locationsView.append(createLocationView(pieces.settlement));
-    pieces.settlement.buildings.forEach(location => {
+    pieces.settlement.locations.forEach(location => {
         locationsView.append(createLocationView(location));
     })
 }
@@ -86,15 +86,15 @@ function getTaskProgressView(task){
     let html = `<div class="progress">`+task.name;
     html += `<div class="progressbar `;
         switch (task.status){
-            case "In Progress":
+            case task.statusMessages.INPROGRESS:
                 let progress = task.ticksDone/task.ticksToComplete;
                 html += `inProgress" style="width:`+ progress*100 +`%">`;
                 break
-            case "Done":
+            case task.statusMessages.DONE:
                 html += `done">`;
                 break;
             default:
-                html += `todo">`;       
+                html += `todo">`;
         }
     return html+= task.name+"</div></div>";
 }

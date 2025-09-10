@@ -37,15 +37,17 @@ body {
 }
 
 #citizens {
+    border-radius: 7pt;
     background-color: #463F1A;
     box-sizing: border-box;
     float:left;
-    max-height: 80pt;
+    max-height: 82pt;
     overflow:scroll;
     width:100%;
 }
 .citizen {
     display:inline-block;
+    border-radius:16pt;
     background-color:#8b4000ff;
     color: #de9151ff;
     font-family:'Franklin Gothic Medium';
@@ -55,6 +57,7 @@ body {
 }
 .citizen .citIcon{
     float:left;
+    border-radius:15pt;
     background-color: #de9151ff;
     margin:4pt;
     height:25pt;
@@ -71,17 +74,18 @@ body {
 
 .nameplate .task {
     border: 1px solid #280003ff;
+    border-radius:10pt;
     background-color:#280003ff;
     color:#bed558ff;
     font-size:smaller;
     font-weight:bold;
     white-space: nowrap;
     overflow:hidden;
-    width:100%;
+    width:90%;
 }
 .progress{
     position:relative;
-    padding-left:2pt;
+    padding-left:4pt;
 }
 .progress .progressbar{
     position:absolute;
@@ -89,7 +93,7 @@ body {
     left:0;
     white-space: nowrap;
     overflow:hidden;
-    padding-left:2pt;
+    padding-left:4pt;
     background-color:#8b9556ff;
     color:#280003ff;
 }

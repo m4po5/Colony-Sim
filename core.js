@@ -1,11 +1,11 @@
-const ProfessionsArray = Object.freeze(["Hauling", "Construction", "Animal Handling"]);
+const ProfessionsArray = Object.freeze(["hauling", "construction", "animal handling"]);
 const Professions = Object.freeze({
     HAULING: ProfessionsArray[0],
     CONSTRUCTION: ProfessionsArray[1],
     ANIMAL_HANDLING: ProfessionsArray[2]
-})
+});
 
-function Task(name, ticksToComplete, profession, workCall, location,minLevelRequired, expYield){
+function Task(name, ticksToComplete, profession, workCall, location, minLevelRequired, expYield){
     this.name = name;
     this.ticksToComplete = ticksToComplete;
     this.ticksDone = 0;
@@ -14,14 +14,21 @@ function Task(name, ticksToComplete, profession, workCall, location,minLevelRequ
     this.location = location;
     this.minLevelRequired = minLevelRequired;
     this.expYield = expYield;
-    this.status = "To Do"
-    this.done = false;
+    this.statusMessages = Object.freeze({
+        TODO: "to do",
+        INPROGRESS: "in progress",
+        DONE: "done",
+        ONHOLD: "on hold",
+        ABORTED: "aborted"
+    });
+    this.status = this.statusMessages.TODO;
+    this.done = function(){return this.status === this.statusMessages.DONE;};
     this.perpetual = false;
     this.assignee = undefined;
     this.location = location;
     this.work = function(){
         this.progress();
-        if(this.done && typeof this.workCall === "function"){
+        if(this.done() && typeof this.workCall === "function"){
             this.workCall();
             if (this.perpetual === true){
                 this.reset();
@@ -29,30 +36,64 @@ function Task(name, ticksToComplete, profession, workCall, location,minLevelRequ
         }
     };
     this.progress = function(){
-        if(this.done){
+        if(this.done()){
             return;
         }
         this.ticksDone += 1;
-        this.status = "In Progress"
+        this.status = this.statusMessages.INPROGRESS;
         if (this.ticksDone === this.ticksToComplete){
-            this.status = "Done"
-            this.done = true;
+            this.status = this.statusMessages.DONE;
         }
     }
     this.reset = function(){
         this.ticksDone = 0;
-        this.done = false;
-        this.status = "ToDo";
+        this.status = this.statusMessages.TODO;
     }
 }
 
-const Wares= Object.freeze({wood:"Wood",food:"Food"});
-
-function csStorage(){
-    this.wares = Wares;
+function ColonySimStorage(){
+    this.wares = Object.freeze({wood:"wood",food:"food"});
     this.accepts = {wood:false,food:false};
     this.maxStorage = {wood:50,food:50}
     this.stored = {wood:0,food:0};
+    this.addWares = function(ware,amount){
+        switch (ware) {
+            case this.wares.wood:
+                if(this.accepts.wood){
+                    this.stored.wood += amount;
+                }
+                break;
+            case this.wares.food:
+                if(this.accepts.food){
+                    this.stored.food += amount;
+                }
+                break;
+        
+            default:
+                break;
+        }
+    };
+    this.removeWares = function(ware,amount){
+        switch (ware) {
+            case this.wares.wood:
+                if(amount < this.stored.wood){
+                    this.stored.wood -= amount;
+                } else {
+                    this.stored.wood = 0;
+                }
+                break;
+            case this.wares.food:
+                if(amount < this.stored.food){
+                    this.stored.food -= amount;
+                } else {
+                    this.stored.food = 0;
+                }
+                break;
+        
+            default:
+                break;
+        }
+    }
 }
 
 function Location(name,storage){
@@ -85,7 +126,7 @@ Location.TaskManagement = function TaskManagement(location){
         this.tasks = this.tasks.filter(t => t !== task);
     };
     this.tasksDone = function(profession){
-        const tasksDone = this.tasks.filter(t => t.profession === profession && t.done)
+        const tasksDone = this.tasks.filter(t => t.profession === profession && t.done())
         return tasksDone;
     };
     this.getTaskToPlan = function(profession){
@@ -112,9 +153,39 @@ Location.TaskManagement = function TaskManagement(location){
             };
         });
         return surplusTasks;
-    },
-    this.getAvailableTasksFor = function(profession){
-        return this.tasks.filter(task => task.assignee === undefined && task.profession === profession && !task.done);
+    };
+    this.getAvailableTasks = function(profession){
+        return this.tasks.filter(task => task.assignee === undefined
+                                && task.profession === profession
+                                && !task.done());
+    };
+    this.createOverseeTask = function(profession){
+        let task = new Task("overseeing "+profession,
+            10,
+            profession,
+            this.overseeingWorkCall,
+            this.location,
+            0)
+        task.perpetual = true;
+        return task;
+    };
+    this.overseeingWorkCall = function(){
+        let tasksDone = this.location.taskManagement.tasksDone(this.profession).filter(t => t!==this);
+        let tasksToCancel = this.location.taskManagement.getSurplusTasks(this.profession);
+        let taskToPlan = undefined;
+        let ass = this.assignee;
+        let workTask = undefined;
+        if (tasksToCancel.length > 0){
+            this.location.taskManagement.removeTask(tasksToCancel[0]);
+        } else if ((taskToPlan = this.location.taskManagement.getTaskToPlan(this.profession))!==undefined){
+            this.location.taskManagement.addTask(taskToPlan);
+        } else if(tasksDone.length > 0){
+            this.location.taskManagement.removeTask(tasksDone[0]);
+        } else if((workTask=this.location.taskManagement.tasks.filter(t => t.profession === ass.profession && t.assignee === undefined)[0]) !== undefined){
+            ass.assignTask(workTask,true);
+        } else {
+            ass.planIdleTask(true);
+        }
     };
 }
 
@@ -143,7 +214,7 @@ function Citizen(name, profession, settlement){
         
         if (this.tasks.length != 0){
             this.tasks[0].work();
-            this.tasks = this.tasks.filter(el => !el.done);
+            this.tasks = this.tasks.filter(t => !t.done());
         }
         else {
             let availableLocations = this.settlement.getLocationsByProfession(this.profession);
@@ -160,19 +231,19 @@ function Citizen(name, profession, settlement){
         }
     };
     this.createSeekWorkTask = function(location){
-        return new Task("Seeking Work",30,this.profession,this.seekWorkCall,location,0);
+        return new Task("seeking work",30,this.profession,this.seekWorkCall,location,0);
     };
     this.seekWorkCall = function(){
         let citizen = this.assignee;
         let availableTasks = undefined;
 
-        availableTasks = this.location.taskManagement.getAvailableTasksFor(this.profession);
+        availableTasks = this.location.taskManagement.getAvailableTasks(this.profession);
         if (availableTasks.length > 0){
             citizen.assignTask(availableTasks[0]);
         }
     };
     this.createIdleTask = function(){
-        let idleTypes = ["Stargazing","Strolling","Picking Flowers","Watching People Work","Whistling a tune"];
+        let idleTypes = ["stargazing","strolling","picking flowers","watching people work","whistling a tune"];
         let idleType = idleTypes[Math.floor(Math.random() * idleTypes.length)];
         return new Task(idleType,60);
     }
@@ -189,7 +260,7 @@ function Settlement(name, storage){
     Location.call(this,name, storage);
     this.taskManagement = new Settlement.TaskManagement(this);
     this.citizens = [];
-    this.buildings = [];
+    this.locations = [];
     this.addCitizen = function(citizen){
         if(citizen instanceof Citizen){
             this.citizens.push(citizen);   
@@ -197,7 +268,7 @@ function Settlement(name, storage){
     };
     this.addBuilding = function (building){
         if (building instanceof Location){
-            this.buildings.push(building)
+            this.locations.push(building)
         } else {
             console.error("Settlement.addBuilding: object is not of instance Location")
         }
@@ -207,7 +278,7 @@ function Settlement(name, storage){
         if (this.locationOfProfession(pieces.settlement,profession)){
             locations.push(pieces.settlement);
         }
-        pieces.settlement.buildings.forEach(building => {
+        pieces.settlement.locations.forEach(building => {
             if (this.locationOfProfession(building,profession)){
                 locations.push(building);
             }
@@ -236,55 +307,27 @@ Settlement.TaskManagement = function TaskManagement(location){
     this.tasks = [];
     this.tasksOverview = function(){
     const gatheringWoodTask = {
-        name:"Gathering Wood",
+        name:"gathering wood",
         profession:Professions.HAULING,
         max:4,
         isNeeded:this.isTaskGatheringWoodNeeded,
         call:this.createTaskGatheringWood
     };
     const gatheringFoodTask = {
-        name:"Gathering Food",
+        name:"gathering food",
         profession:Professions.HAULING,
         max:1,
         isNeeded:this.isTaskGatheringFoodNeeded,
         call:this.createTaskGatheringFood
     }
     const huntingTask = {
-        name:"Hunting",
+        name:"hunting",
         profession:Professions.ANIMAL_HANDLING,
         max:3,
         isNeeded:this.isTaskHuntingNeeded,
         call:this.createTaskHunting
     }
     return [gatheringWoodTask,gatheringFoodTask,huntingTask];
-    };
-    this.createOverseeTask = function(profession){
-        let task = new Task("Overseeing "+profession,
-            10,
-            profession,
-            this.overseeingWorkCall,
-            this.location,
-            0)
-        task.perpetual = true;
-        return task;
-    };
-    this.overseeingWorkCall = function(){
-        let tasksDone = this.location.taskManagement.tasksDone(this.profession).filter(t => t!==this);
-        let tasksToCancel = this.location.taskManagement.getSurplusTasks(this.profession);
-        let taskToPlan = undefined;
-        let ass = this.assignee;
-        let workTask = undefined;
-        if (tasksToCancel.length > 0){
-            this.location.taskManagement.removeTask(tasksToCancel[0]);
-        } else if ((taskToPlan = this.location.taskManagement.getTaskToPlan(this.profession))!==undefined){
-            this.location.taskManagement.addTask(taskToPlan);
-        } else if(tasksDone.length > 0){
-            this.location.taskManagement.removeTask(tasksDone[0]);
-        } else if((workTask=this.location.taskManagement.tasks.filter(t => t.profession === ass.profession && t.assignee === undefined)[0]) !== undefined){
-            ass.assignTask(workTask,true);
-        } else {
-            ass.planIdleTask(true);
-        }
     };
     // Called within taskOverview object.
     this.isTaskGatheringWoodNeeded = function(location){
@@ -296,7 +339,7 @@ Settlement.TaskManagement = function TaskManagement(location){
     };
     // Called within taskOverview object.
     this.createTaskGatheringWood = function(location){
-        const gatheringWoodTask = new Task("Gathering Wood",
+        const gatheringWoodTask = new Task(this.name,
             90,
             Professions.HAULING,
             location.taskManagement.gatheringWoodWorkCall,
@@ -309,7 +352,7 @@ Settlement.TaskManagement = function TaskManagement(location){
     this.gatheringWoodWorkCall = function(){
         const woodGathered = 1 + Math.floor(Math.random() * 3);
         const storage = this.location.storage;
-        storage.stored.wood += woodGathered;
+        storage.addWares(storage.wares.wood,woodGathered);
     };
     this.isTaskGatheringFoodNeeded = function(location){
         if (location.storage.stored.food <= location.storage.maxStorage.food){
@@ -319,7 +362,7 @@ Settlement.TaskManagement = function TaskManagement(location){
         }
     };
     this.createTaskGatheringFood = function(location){
-        const gatheringFoodTask = new Task("Gathering Food",
+        const gatheringFoodTask = new Task(this.name,
             60,
             Professions.HAULING,
             location.taskManagement.gatheringFoodWorkCall,
@@ -331,7 +374,7 @@ Settlement.TaskManagement = function TaskManagement(location){
     this.gatheringFoodWorkCall = function(){
         const foodGathered = 2 + Math.floor(Math.random() * 2);
         const storage = this.location.storage;
-        storage.stored.food += foodGathered;
+        storage.addWares(storage.wares.food,foodGathered);
     };
     this.isTaskHuntingNeeded = function(location){
         if (location.storage.stored.food <= location.storage.maxStorage.food){
@@ -341,7 +384,7 @@ Settlement.TaskManagement = function TaskManagement(location){
         }
     };
     this.createTaskHunting = function(location){
-        const huntingTask = new Task("Hunting",
+        const huntingTask = new Task(this.name,
             300,
             Professions.ANIMAL_HANDLING,
             location.taskManagement.huntingWorkCall,
@@ -353,7 +396,7 @@ Settlement.TaskManagement = function TaskManagement(location){
     this.huntingWorkCall = function(){
         const foodGathered = 3 + Math.floor(Math.random() * 15);;
         const storage = this.location.storage;
-        storage.stored.food += foodGathered;
+        storage.addWares(storage.wares.food,foodGathered);
     };
 };
 Location.TaskManagement.prototype = Object.create(Location.TaskManagement.prototype);
@@ -363,15 +406,19 @@ Location.TaskManagement.prototype.constructor = Location.TaskManagement;
 
 const pieces = {
     settlement: undefined,
-    forester: new Location("Forester"),
-    init(){
-        this.settlement = new Settlement("Settlement", this.getSettlementStorage());
+    forester: new Location("forester"),
+    init(){ // has to go into some sort of factory,
+    // even if I could put it into the constructor function,
+    // I don't want to see new Stuff().init()!
+    // Though this should evaporate as soon as I
+    // design a proper module around my game.
+        this.settlement = new Settlement("settlement", this.getSettlementStorage());
         this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.HAULING));
         this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.ANIMAL_HANDLING));
         this.settlement.addBuilding(this.forester);
     },
     getSettlementStorage(){
-        const storage = new csStorage();
+        const storage = new ColonySimStorage();
         storage.accepts.food=true;
         storage.accepts.wood=true;
 
