@@ -7,3 +7,13 @@
 - [ ] Construct Building Task: Design and Implementation
 - [ ] Need Food Update
 - [ ] Deterioration Of Surplus Wares
+
+## Technical Desicions
+### Main Loop
+- Decoupled from UI to allow Browser go to sleep and the game to catch up with time when the user tabs back in.
+- :exclamation: Careful use of Events is adviced to prevent bombarding the browser in that scenario!
+
+### Custom Add/Remove Events
+- dynamicall triggered and managed by game engine
+  - > JS is designed to look at user-driven events like clicking and input.
+- trade-off between massively improved maintainability and slight increase of potential overlaod after sleep time.

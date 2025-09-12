@@ -1,3 +1,77 @@
+function ColonySimEvent(){
+    this.handlers=[];
+    this.addHandler = function(onEventCall){
+        this.handlers.push(onEventCall);
+    };
+    this.trigger = function(element){
+        this.handlers.forEach(h => h(element));
+    }
+}
+
+function ColonySimData(label){
+    this.label = label;
+    this.array = [];
+    this.counter = 0;
+    this.addEvent = new ColonySimEvent();
+    this.add = function(obj){
+        this.counter += 1;
+        const count = this.counter;
+        const data = {object:obj,id:count,label:this.label+count}
+        this.array.push(data);
+        this.addEvent.trigger(data);
+    };
+    this.removeEvent = new ColonySimEvent();
+    this.remove = function(obj){
+        const data = this.array.filter(d => d.object === obj)[0];
+        const label = data.label;
+        this.removeEvent.trigger(label)
+        this.array = this.array.filter(d => d !== data);
+        delete data;
+    }
+}
+
+const ColonySim = {
+    Data: {
+        Citizens: new ColonySimData("citizen"),
+        Locations: new ColonySimData("location"),
+        Storages: new ColonySimData("storage"),
+        Tasks: new ColonySimData("task")
+    },
+    GameControls: {
+        requestMainAnimationFrame: undefined,
+        stopMain() { window.cancelAnimationFrame(ColonySim.GameControls.requestMainAnimationFrame); },
+        lastTick: window.performance.now(),
+        tickLength: 100,
+        lastRender: window.performance.now(),
+        frameLength: 30,
+        isPlaying: false,
+        play(){
+            this.lasTick = this.lastRender = window.performance.now();
+            this.isPlaying=true;
+        },
+        pause(){
+            this.isPlaying=false;
+        },
+        playToggle(){
+            if(this.isPlaying){
+                this.pause();
+            } else {
+                this.play();
+            }
+        },
+        update(){
+            if(ColonySim.GameControls.isPlaying){
+                this.citizensTick();
+            }
+        },
+        citizensTick(){
+            ColonySim.Data.Citizens.array.forEach(citizen => {
+                citizen.object.tick();
+            })
+        }
+    }
+};
+
 const ProfessionsArray = Object.freeze(["hauling", "construction", "animal handling"]);
 const Professions = Object.freeze({
     HAULING: ProfessionsArray[0],
@@ -44,11 +118,12 @@ function Task(name, ticksToComplete, profession, workCall, location, minLevelReq
         if (this.ticksDone === this.ticksToComplete){
             this.status = this.statusMessages.DONE;
         }
-    }
+    };
     this.reset = function(){
         this.ticksDone = 0;
         this.status = this.statusMessages.TODO;
-    }
+    };
+    ColonySim.Data.Tasks.add(this);
 }
 
 function ColonySimStorage(){
@@ -93,13 +168,15 @@ function ColonySimStorage(){
             default:
                 break;
         }
-    }
+    };
+    ColonySim.Data.Storages.add(this);
 }
 
 function Location(name,storage){
     this.name = name;
     this.storage = storage;
     this.taskManagement = new Location.TaskManagement(this);
+    ColonySim.Data.Locations.add(this);
 }
 
 Location.TaskManagement = function TaskManagement(location){
@@ -124,6 +201,7 @@ Location.TaskManagement = function TaskManagement(location){
     };
     this.removeTask = function(task){
         this.tasks = this.tasks.filter(t => t !== task);
+        ColonySim.Data.Tasks.remove(task);
     };
     this.tasksDone = function(profession){
         const tasksDone = this.tasks.filter(t => t.profession === profession && t.done())
@@ -190,8 +268,6 @@ Location.TaskManagement = function TaskManagement(location){
 }
 
 function Citizen(name, profession, settlement){
-    Citizen.numInstances = (Citizen.numInstances || 0) + 1;
-    this.citId = Citizen.numInstances;
     this.name = "J. Doe";
     if (name !== undefined){
         this.name = name;
@@ -240,32 +316,30 @@ function Citizen(name, profession, settlement){
         availableTasks = this.location.taskManagement.getAvailableTasks(this.profession);
         if (availableTasks.length > 0){
             citizen.assignTask(availableTasks[0]);
-        }
+        };
+        ColonySim.Data.Tasks.remove(this);
     };
     this.createIdleTask = function(){
         let idleTypes = ["stargazing","strolling","picking flowers","watching people work","whistling a tune"];
         let idleType = idleTypes[Math.floor(Math.random() * idleTypes.length)];
-        return new Task(idleType,60);
-    }
+        let idleTask = new Task(idleType,60);
+        idleTask.workCall = ()=>{ColonySim.Data.Tasks.remove(idleTask);};
+        return idleTask;
+    };
     this.planSeekWorkTask = function(location,unshift){
         this.assignTask(this.createSeekWorkTask(location,unshift));
-    }
+    };
     this.planIdleTask = function(unshift){
         let IdleTask = this.createIdleTask();
         this.assignTask(IdleTask,unshift);
-    }
+    };
+    ColonySim.Data.Citizens.add(this);
 }
 
 function Settlement(name, storage){
     Location.call(this,name, storage);
     this.taskManagement = new Settlement.TaskManagement(this);
-    this.citizens = [];
     this.locations = [];
-    this.addCitizen = function(citizen){
-        if(citizen instanceof Citizen){
-            this.citizens.push(citizen);   
-        }
-    };
     this.addBuilding = function (building){
         if (building instanceof Location){
             this.locations.push(building)
@@ -431,10 +505,9 @@ const pieces = {
 pieces.init();
 
 const Generator = {
-    citizen(settlement){
+    citizenName(){
         const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael","Constantin"];
         const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith","Frederica","Rebecca"];
-        const profession = ProfessionsArray[Math.floor(Math.random() * ProfessionsArray.length)];
 
         let name = "";
 
@@ -443,9 +516,13 @@ const Generator = {
         } else {
             name = wFirst[Math.floor(Math.random() * wFirst.length)]
         }
-
-        let citizen = new Citizen(name, profession, settlement);
-        settlement.addCitizen(citizen);
+        return name;
+    },
+    citizenProfession(){
+        return ProfessionsArray[Math.floor(Math.random() * ProfessionsArray.length)];
+    },
+    citizen(settlement){
+        let citizen = new Citizen(this.citizenName(), this.citizenProfession(), settlement);
         return citizen;
     },
     citizens(amount,settlement){
@@ -459,76 +536,3 @@ const Generator = {
         return citizens;
     }
 };
-
-Generator.citizens(7,pieces.settlement);
-pieces.settlement.citizens.forEach(cit => {if(cit.profession === Professions.CONSTRUCTION){cit.profession = Professions.HAULING}});
-
-// ------------------ start Game ----------------
-
-const ColonySim = {
-    requestMainAnimationFrame: undefined,
-    stopMain() { window.cancelAnimationFrame(ColonySim.requestMainAnimationFrame); },
-    lastTick: window.performance.now(),
-    tickLength: 100,
-    lastRender: window.performance.now(),
-    frameLength: 30,
-    isPlaying: false,
-    play(){
-        this.lasTick = this.lastRender = window.performance.now();
-        this.isPlaying=true;
-    },
-    pause(){
-        this.isPlaying=false;
-    },
-    playToggle(){
-        if(this.isPlaying){
-            this.pause();
-        } else {
-            this.play();
-        }
-    },
-    update(){
-        if(ColonySim.isPlaying){
-            this.citizensTick();
-        }
-    },
-    citizensTick(){
-        pieces.settlement.citizens.forEach(citizen => {
-            citizen.tick();
-        })
-}
-}
-
-// inspiration from source: https://developer.mozilla.org/en-US/docs/Games/Anatomy#building_a_main_loop_in_javascript
-; (() => {
-    function main(tFrame) {
-        ColonySim.requestMainAnimationFrame = window.requestAnimationFrame(main);
-        
-        const nextTick = ColonySim.lastTick + ColonySim.tickLength;
-        let numTicks = 0;
-        if (tFrame > nextTick) {
-            const timeSinceTick = tFrame - ColonySim.lastTick;
-            numTicks = Math.floor(timeSinceTick / ColonySim.tickLength);
-        }
-
-        queueUpdates(numTicks);
-        
-        const timeSinceRender = tFrame - ColonySim.lastRender
-        if(timeSinceRender > ColonySim.frameLength){
-            updateSettlementView();
-            ColonySim.lastRender = tFrame;
-        }
-    }
-
-    function queueUpdates(numTicks) {
-        for (let i = 0; i < numTicks; i++) {
-            ColonySim.lastTick += ColonySim.tickLength;
-            ColonySim.update(ColonySim.lastTick);
-        }
-    }
-    ColonySim.lastTick = performance.now();
-    ColonySim.lastRender = ColonySim.lastTick;
-    ColonySim.tickLength = 100;
-    //setInitialState();//Performs whatever tasks are leftover before the main loop must run. My game Setup.
-    main(); // Start the cycle
-})();

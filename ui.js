@@ -1,5 +1,4 @@
-
-// ----------- Game View and Main Coil ---------
+// ----------- Game View ---------
 
 function updateSettlementView(){
 
@@ -19,53 +18,34 @@ function updateStorage(){
     $("#food").text(pieces.settlement.storage.stored.food);
 }
 
-const View={
-    citizens:[]
+function onCitizenAddedEvent(citizen){
+    const citView = createCitizenView(citizen);
+    $("#citizens").append(citView);
 }
+ColonySim.Data.Citizens.addEvent.addHandler(onCitizenAddedEvent);
+
+function onCitizenRemovedEvent(label){
+    $("#"+label).remove();
+}
+ColonySim.Data.Citizens.removeEvent.addHandler(onCitizenRemovedEvent);
 
 function updateCitizensView(){
     const citizensView = $("#citizens");
-
-    function updateViewCitizensPairs(citizensView) {
-        const citizens = pieces.settlement.citizens;
-        if (View.citizens.length === 0 && citizens != 0) {
-                createCitizenViewPair(citizensView,citizens[0]);
-        }
-        pieces.settlement.citizens.forEach(citizen => {
-            if (View.citizens.filter(vc => vc.citizenData === citizen).length === 0) {
-                createCitizenViewPair(citizensView,citizen);
-            }
-        });
-        function createCitizenViewPair(citizensView,citizen) {
-            const citView = createCitizenView(citizen);
-            View.citizens.push({ citizenData: citizen, viewId: "#citizenId"+citizen.citId });
-            citizensView.append(citView);
-        }
-        View.citizens.forEach(vc => {
-            if(pieces.settlement.citizens.filter(cit => cit === vc.citizenData).length === 0){
-                $(vc.viewId).remove();
-                const index = View.citizens.indexOf(vc);
-                if(index > -1){
-                    View.citizens.splice(index,1);
-                }
-            }
-        });
-    };
-    updateViewCitizensPairs(citizensView)
     
     // update displayed data
-    View.citizens.forEach((vc) => {
+    ColonySim.Data.Citizens.array.forEach((dc) => {
         let taskText = `<div class="progress">idling</div>`;
-        if(vc.citizenData.tasks.length > 0){
-            const task = vc.citizenData.tasks[0];
+        if(dc.object.tasks.length > 0){
+            const task = dc.object.tasks[0];
             taskText = getTaskProgressView(task);
         }
-        $(vc.viewId).children(".nameplate").children(".task").html(taskText)
+        $("#"+dc.label).children(".nameplate").children(".task").html(taskText)
     });
 }
 
-function createCitizenView(citizen){
-    let html = `<div id="citizenId`+citizen.citId+`" class="citizen">`;
+function createCitizenView(citizenData){
+    let html = `<div id="`+citizenData.label+`" class="citizen">`;
+    const citizen = citizenData.object;
     html += `<div src="citIcon.jpg" class="citIcon"></div>`
     html += `<div class="nameplate">`
     html += `<span class="name">`+citizen.name+`</span>`;
