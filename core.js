@@ -5,8 +5,8 @@ function ColonySimEvent(){
     };
     this.trigger = function(element){
         this.handlers.forEach(h => h(element));
-    }
-}
+    };
+};
 
 function ColonySimData(label){
     this.label = label;
@@ -22,13 +22,13 @@ function ColonySimData(label){
     };
     this.removeEvent = new ColonySimEvent();
     this.remove = function(obj){
-        const data = this.array.filter(d => d.object === obj)[0];
+        let data = this.array.filter(d => d.object === obj)[0];
         const label = data.label;
         this.removeEvent.trigger(label)
         this.array = this.array.filter(d => d !== data);
-        delete data;
-    }
-}
+        data = null;
+    };
+};
 
 const ColonySim = {
     Data: {

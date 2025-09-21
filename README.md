@@ -7,6 +7,8 @@
 - [ ] Construct Building Task: Design and Implementation
 - [ ] Need Food Update
 - [ ] Deterioration Of Surplus Wares
+- [ ] Concept Profession Tree, Unemployment, Advancement and Career Change
+- [ ] Taverns and Entertainment for the Workers
 
 ## Technical Desicions
 ### Main Loop
