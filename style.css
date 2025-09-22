@@ -17,6 +17,7 @@
 body {
     background-color:burlywood;
     color: #280003ff;
+    display:grid;
 }
 
 .menubar {
@@ -32,8 +33,31 @@ body {
     padding-left:5pt;
 }
 
-#settlement {
+#tasksOverview {
     display:grid;
+}
+
+#locations{
+    display:grid;
+    box-sizing: border-box;
+    float: left;
+}
+.location {
+    float:left;
+}
+.location .name {
+    padding:2px;
+}
+.location .task {
+    float:left;
+    background-color:white;
+    color:black;
+    margin:1pt;
+    padding-left:3pt;
+    padding-right:3pt;
+    padding-top:3pt;
+    width:180px;
+    height:100px;
 }
 
 #citizens {
@@ -69,6 +93,7 @@ body {
     padding:1.5pt;
 }
 .nameplate .name {
+    padding:0pt;
     font-weight:bold;
 }
 
@@ -81,8 +106,13 @@ body {
     font-weight:bold;
     white-space: nowrap;
     overflow:hidden;
+    padding-left:0pt;
+    padding-right:0pt;
+    padding-top:0pt;
     width:90%;
+    height: auto;
 }
+
 .progress{
     position:relative;
     padding-left:4pt;
@@ -99,24 +129,4 @@ body {
 }
 .progress .progressbar.todo {
     visibility:hidden;
-}
-
-#locations{
-    display:grid;
-    box-sizing: border-box;
-    float: left;
-}
-.location {
-    float:left;
-}
-.location .name {
-    padding:2px;
-}
-.location .task {
-    float:left;
-    border: 2px solid darkred;
-    background-color:brown;
-    color:white;
-    padding-left:5px;
-    padding-right:5px;
 }

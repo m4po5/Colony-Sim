@@ -2,7 +2,9 @@
 ## Roadmap
 - [ ] UI Overhaul
   - [x] Merge Task Progress into minimalized Citizin View
-  - [ ] Blackboard per Location
+  - [x] Blackboard per Location
+  - [ ] Citizens show up in locations where they are performing their tasks.
+    - :warning: :bug: Idle Tasks causing non-breaking errors!
   - [ ] Blackboard and Management Tabs per Location
 - [ ] Construct Building Task: Design and Implementation
 - [ ] Need Food Update

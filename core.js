@@ -13,6 +13,9 @@ function ColonySimData(label){
     this.array = [];
     this.counter = 0;
     this.addEvent = new ColonySimEvent();
+    this.getDataByObject = function(object){
+        return this.array.filter(el => el.object === object);
+    };
     this.add = function(obj){
         this.counter += 1;
         const count = this.counter;
@@ -69,8 +72,39 @@ const ColonySim = {
                 citizen.object.tick();
             })
         }
+    },
+    ViewBuffer: {
+        Tasks:{
+            toCreate: [],
+            toRemove: [],
+            removeToCreateLabel(label){
+                ColonySim.ViewBuffer.Tasks.toCreate = ColonySim.ViewBuffer.Tasks.toCreate.filter(l => l !== label);
+            },removeToRemoveLabel(label){
+                ColonySim.ViewBuffer.Tasks.toRemove = ColonySim.ViewBuffer.Tasks.toRemove.filter(l => l !== label);
+            },
+            theAddLogic(taskData){
+                const label = taskData.label;
+                ColonySim.ViewBuffer.Tasks.toCreate.push(label);
+            },
+            theRemoveLogic(label){
+                const vbTasks = ColonySim.ViewBuffer.Tasks;
+                if (vbTasks.toCreate.filter(l => l === label).length > 0){
+                    vbTasks.toCreate = vbTasks.toCreate.filter(l => l !== label);
+                } else {
+                    vbTasks.toRemove.push(label);
+                }
+            },
+            init(){
+                ColonySim.Data.Tasks.addEvent.addHandler(this.theAddLogic);
+                ColonySim.Data.Tasks.removeEvent.addHandler(this.theRemoveLogic);
+            }
+        }
+    },
+    init(){
+        ColonySim.ViewBuffer.Tasks.init();
     }
 };
+ColonySim.init();
 
 const ProfessionsArray = Object.freeze(["hauling", "construction", "animal handling"]);
 const Professions = Object.freeze({
@@ -475,34 +509,6 @@ Settlement.TaskManagement = function TaskManagement(location){
 };
 Location.TaskManagement.prototype = Object.create(Location.TaskManagement.prototype);
 Location.TaskManagement.prototype.constructor = Location.TaskManagement;
-
-//-------------- Presets --------------
-
-const pieces = {
-    settlement: undefined,
-    forester: new Location("forester"),
-    init(){ // has to go into some sort of factory,
-    // even if I could put it into the constructor function,
-    // I don't want to see new Stuff().init()!
-    // Though this should evaporate as soon as I
-    // design a proper module around my game.
-        this.settlement = new Settlement("settlement", this.getSettlementStorage());
-        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.HAULING));
-        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.ANIMAL_HANDLING));
-        this.settlement.addBuilding(this.forester);
-    },
-    getSettlementStorage(){
-        const storage = new ColonySimStorage();
-        storage.accepts.food=true;
-        storage.accepts.wood=true;
-
-        storage.maxStorage.food = 100;
-        storage.maxStorage.wood =100;
-
-        return storage;
-    }
-}
-pieces.init();
 
 const Generator = {
     citizenName(){

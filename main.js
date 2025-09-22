@@ -1,3 +1,31 @@
+//-------------- Presets --------------
+
+const pieces = {
+    settlement: undefined,
+    forester: new Location("forester"),
+    init(){ // has to go into some sort of factory,
+    // even if I could put it into the constructor function,
+    // I don't want to see new Stuff().init()!
+    // Though this should evaporate as soon as I
+    // design a proper module around my game.
+        this.settlement = new Settlement("settlement", this.getSettlementStorage());
+        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.HAULING));
+        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.ANIMAL_HANDLING));
+        this.settlement.addBuilding(this.forester);
+    },
+    getSettlementStorage(){
+        const storage = new ColonySimStorage();
+        storage.accepts.food=true;
+        storage.accepts.wood=true;
+
+        storage.maxStorage.food = 100;
+        storage.maxStorage.wood = 100;
+
+        return storage;
+    }
+}
+pieces.init();
+
 // Game Initialization
 Generator.citizens(7,pieces.settlement);
 ColonySim.Data.Citizens.array.forEach(cit => {if(cit.object.profession === Professions.CONSTRUCTION){cit.object.profession = Professions.HAULING}});
