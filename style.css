@@ -52,6 +52,8 @@ body {
     float:left;
     background-color:white;
     color:black;
+    white-space: nowrap;
+    overflow:hidden;
     margin:1pt;
     padding-left:3pt;
     padding-right:3pt;

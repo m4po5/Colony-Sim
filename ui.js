@@ -86,15 +86,16 @@ ColonySim.Data.Locations.removeEvent.addHandler(onLocationRemovedEvent);
 function updateLocationViews(){
     if (ColonySim.ViewBuffer.Tasks.toCreate.length > 0){
         ColonySim.ViewBuffer.Tasks.toCreate.forEach(label => {
-            const task = ColonySim.Data.Tasks.array.filter(el => el.label === label)[0];
-            const locationData = ColonySim.Data.Locations.getDataByObject(task.object.location)[0];
-            $("#"+locationData.label).children(".tasks").append(createTaskView(task.object));
-            ColonySim.ViewBuffer.Tasks.removeToCreateLabel(label);
+            const task = ColonySim.Data.Tasks.getDataByLabel(label);
+            const locationData = ColonySim.Data.Locations.getDataByObject(task.object.location);
+            if (locationData !== undefined){
+                $("#"+locationData.label).children(".tasks").append(createTaskView(task.object));
+                ColonySim.ViewBuffer.Tasks.removeToCreateLabel(label);
+            }
         });
     }
     if (ColonySim.ViewBuffer.Tasks.toRemove.length > 0){
         ColonySim.ViewBuffer.Tasks.toRemove.forEach(label => {
-            console.log(label),
             $("#"+label).remove();
             ColonySim.ViewBuffer.Tasks.removeToRemoveLabel(label);
         });
@@ -118,7 +119,7 @@ function createLocationView(locationData){
 
 function createTaskView(task) {
     let html = "";
-    let taskData = ColonySim.Data.Tasks.getDataByObject(task)[0];
+    let taskData = ColonySim.Data.Tasks.getDataByObject(task);
     html += `<div id="` + taskData.label + `" class="task">`;
     html += `<span class="name">` + task.name + `</span>`;
     html += `<hr>`;

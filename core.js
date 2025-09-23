@@ -14,7 +14,10 @@ function ColonySimData(label){
     this.counter = 0;
     this.addEvent = new ColonySimEvent();
     this.getDataByObject = function(object){
-        return this.array.filter(el => el.object === object);
+        return this.array.filter(el => el.object === object)[0];
+    };
+    this.getDataByLabel = function(label){
+        return this.array.filter(el => el.label === label)[0];
     };
     this.add = function(obj){
         this.counter += 1;
@@ -77,16 +80,24 @@ const ColonySim = {
         Tasks:{
             toCreate: [],
             toRemove: [],
+            // for refactoring: Clean handover of state.
+            // emptyBuffer() {
+            //    let toCreateCopy = ColonySim.ViewBuffer.Tasks.toCreate;
+            //    ColonySim.ViewBuffer.Tasks.toCreate = [];
+            //    --- same for toRemove, and all future buffers ---
+            //    return {toCreateCopy,toRemoveCopy};
+            // }
+            // Then implement UI buffer processing accordingly.
             removeToCreateLabel(label){
                 ColonySim.ViewBuffer.Tasks.toCreate = ColonySim.ViewBuffer.Tasks.toCreate.filter(l => l !== label);
             },removeToRemoveLabel(label){
                 ColonySim.ViewBuffer.Tasks.toRemove = ColonySim.ViewBuffer.Tasks.toRemove.filter(l => l !== label);
             },
-            theAddLogic(taskData){
+            onAdd(taskData){
                 const label = taskData.label;
                 ColonySim.ViewBuffer.Tasks.toCreate.push(label);
             },
-            theRemoveLogic(label){
+            onRemove(label){
                 const vbTasks = ColonySim.ViewBuffer.Tasks;
                 if (vbTasks.toCreate.filter(l => l === label).length > 0){
                     vbTasks.toCreate = vbTasks.toCreate.filter(l => l !== label);
@@ -95,8 +106,8 @@ const ColonySim = {
                 }
             },
             init(){
-                ColonySim.Data.Tasks.addEvent.addHandler(this.theAddLogic);
-                ColonySim.Data.Tasks.removeEvent.addHandler(this.theRemoveLogic);
+                ColonySim.Data.Tasks.addEvent.addHandler(this.onAdd);
+                ColonySim.Data.Tasks.removeEvent.addHandler(this.onRemove);
             }
         }
     },
