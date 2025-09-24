@@ -109,10 +109,29 @@ const ColonySim = {
                 ColonySim.Data.Tasks.addEvent.addHandler(this.onAdd);
                 ColonySim.Data.Tasks.removeEvent.addHandler(this.onRemove);
             }
+        },
+        Citizens: {
+            toChangeCurrentTask: [],
+            onToChangeCurrentTask(citizenData){
+                const citObj = citizenData.object;
+                const currentTask = ColonySim.Data.Tasks.getDataByObject(citObj.currentTask);
+                const currentTaskChange = {currentTask: currentTask.label,
+                                           citizen: citizenData.label
+                };
+                ColonySim.ViewBuffer.Citizens.toChangeCurrentTask = ColonySim.ViewBuffer.Citizens.toChangeCurrentTask.filter(el => el.citizen !== citizenData.label);
+                ColonySim.ViewBuffer.Citizens.toChangeCurrentTask.push(currentTaskChange);
+            },
+            subscribeToNewCitizen(citizen){
+                citizen.object.currentTaskChangedEvent.addHandler(ColonySim.ViewBuffer.Citizens.onToChangeCurrentTask);
+            },
+            init(){
+                ColonySim.Data.Citizens.addEvent.addHandler(this.subscribeToNewCitizen);
+            }
         }
     },
     init(){
         ColonySim.ViewBuffer.Tasks.init();
+        ColonySim.ViewBuffer.Citizens.init();
     }
 };
 ColonySim.init();
@@ -320,6 +339,8 @@ function Citizen(name, profession, settlement){
     this.profession = profession;
     this.settlement = settlement;
     this.tasks = [];
+    this.currentTask = undefined;
+    this.currentTaskChangedEvent = new ColonySimEvent();
     this.assignTask = function(task,unshift){
         if(unshift){
             this.tasks.unshift(task);
@@ -329,13 +350,19 @@ function Citizen(name, profession, settlement){
         task.assignee = this;
     }
     this.unAssignTask = function(task){
-        this.tasks = this.tasks.filter(t => t !== filter)
+        this.tasks = this.tasks.filter(t => t !== task)
     }
     this.tick = function(){
-        
         if (this.tasks.length != 0){
-            this.tasks[0].work();
-            this.tasks = this.tasks.filter(t => !t.done());
+            if (this.currentTask !== this.tasks[0]){
+                this.currentTask = this.tasks[0];
+                this.currentTaskChangedEvent.trigger(ColonySim.Data.Citizens.getDataByObject(this));
+            };
+            this.currentTask.work();
+            if(this.currentTask.done()){
+                this.tasks = this.tasks.filter(t => t != this.currentTask);
+                this.currentTask = undefined;
+            };
         }
         else {
             let availableLocations = this.settlement.getLocationsByProfession(this.profession);

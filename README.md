@@ -1,10 +1,10 @@
 # Colony-Sim
 ## Roadmap
 - [ ] UI Overhaul
-  - [x] Merge Task Progress into minimalized Citizin View
+  - [x] Merge Task Progress into minimized Citizens View
   - [x] Blackboard per Location
-  - [ ] Citizens show up in locations where they are performing their tasks.
-    - :warning: :bug: Idle Tasks causing non-breaking errors!
+  - [x] Citizens show up in locations where they are performing their tasks.
+    - :warning: :bug: ~~Idle Tasks causing non-breaking errors!~~
   - [ ] Blackboard and Management Tabs per Location
 - [ ] Construct Building Task: Design and Implementation
 - [ ] Need Food Update
@@ -15,9 +15,9 @@
 ## Technical Desicions
 ### Main Loop
 - Decoupled from UI to allow Browser go to sleep and the game to catch up with time when the user tabs back in.
-- :exclamation: Careful use of Events is adviced to prevent bombarding the browser in that scenario!
+- :exclamation: Careful use of Events is advised to prevent bombarding the browser in that scenario!
 
 ### Custom Add/Remove Events
-- dynamicall triggered and managed by game engine
+- dynamically triggered and managed by game engine
   - > JS is designed to look at user-driven events like clicking and input.
-- trade-off between massively improved maintainability and slight increase of potential overlaod after sleep time.
+- trade-off between massively improved maintainability and slight increase of potential overload after sleep time.

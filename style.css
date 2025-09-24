@@ -67,6 +67,7 @@ body {
     background-color: #463F1A;
     box-sizing: border-box;
     float:left;
+    min-height: 36.5pt;
     max-height: 82pt;
     overflow:scroll;
     width:100%;
