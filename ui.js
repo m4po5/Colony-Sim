@@ -98,7 +98,7 @@ function onLocationRemovedEvent(id){
 ColonySim.DataManagement.Locations.removeEvent.addHandler(onLocationRemovedEvent);
 
 function updateLocationViewsNewTasks(){
-    const toCreateIds = ColonySim.ViewBuffer.Tasks.toCreate.readIdSets();
+    const toCreateIds = ColonySim.ViewBuffers.Tasks.toCreate.readIdSets();
     toCreateIds.forEach(set => {
         let taskId = set[0];
         const task = ColonySim.DataManagement.Tasks.getDataById(taskId);
@@ -110,7 +110,7 @@ function updateLocationViewsNewTasks(){
 };
 
 function updateLocationViewRemovedTasks(){
-    const toRemoveIds = ColonySim.ViewBuffer.Tasks.toRemove.readIdSets();
+    const toRemoveIds = ColonySim.ViewBuffers.Tasks.toRemove.readIdSets();
     toRemoveIds.forEach(set => {
         let taskId = set[0];
         $("#citizens").append($("#"+taskId).children(".assignee").children(".citizen"))
@@ -130,7 +130,7 @@ function createTaskView(task) {
 
 // ----- Citizen Task Allocation ----
 function updateCitizensCurrentTask(){
-    const cct = ColonySim.ViewBuffer.Citizens.toChangeCurrentTask.readIdSets();
+    const cct = ColonySim.ViewBuffers.Citizens.toChangeCurrentTask.readIdSets();
     cct.forEach(set => {
         let citizenId = set[0];
         let taskId = set[1];

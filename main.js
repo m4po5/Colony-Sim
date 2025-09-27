@@ -35,33 +35,33 @@ ColonySim.DataManagement.Citizens.data.forEach(cit => {if(cit.profession === Pro
 // inspiration from source: https://developer.mozilla.org/en-US/docs/Games/Anatomy#building_a_main_loop_in_javascript
 ; (() => {
     function main(tFrame) {
-        ColonySim.GameControls.requestMainAnimationFrame = window.requestAnimationFrame(main);
+        ColonySim.Game.Controls.requestMainAnimationFrame = window.requestAnimationFrame(main);
         
-        const nextTick = ColonySim.GameControls.lastTick + ColonySim.GameControls.tickLength;
+        const nextTick = ColonySim.Game.Controls.lastTick + ColonySim.Game.Controls.tickLength;
         let numTicks = 0;
         if (tFrame > nextTick) {
-            const timeSinceTick = tFrame - ColonySim.GameControls.lastTick;
-            numTicks = Math.floor(timeSinceTick / ColonySim.GameControls.tickLength);
+            const timeSinceTick = tFrame - ColonySim.Game.Controls.lastTick;
+            numTicks = Math.floor(timeSinceTick / ColonySim.Game.Controls.tickLength);
         }
 
         queueUpdates(numTicks);
         
-        const timeSinceRender = tFrame - ColonySim.GameControls.lastRender
-        if(timeSinceRender > ColonySim.GameControls.frameLength){
+        const timeSinceRender = tFrame - ColonySim.Game.Controls.lastRender
+        if(timeSinceRender > ColonySim.Game.Controls.frameLength){
             updateSettlementView();
-            ColonySim.GameControls.lastRender = tFrame;
+            ColonySim.Game.Controls.lastRender = tFrame;
         }
     }
 
     function queueUpdates(numTicks) {
         for (let i = 0; i < numTicks; i++) {
-            ColonySim.GameControls.lastTick += ColonySim.GameControls.tickLength;
-            ColonySim.GameControls.update(ColonySim.GameControls.lastTick);
+            ColonySim.Game.Controls.lastTick += ColonySim.Game.Controls.tickLength;
+            ColonySim.Game.Controls.update(ColonySim.Game.Controls.lastTick);
         }
     }
-    ColonySim.GameControls.lastTick = performance.now();
-    ColonySim.GameControls.lastRender = ColonySim.GameControls.lastTick;
-    ColonySim.GameControls.tickLength = 100;
+    ColonySim.Game.Controls.lastTick = performance.now();
+    ColonySim.Game.Controls.lastRender = ColonySim.Game.Controls.lastTick;
+    ColonySim.Game.Controls.tickLength = 100;
     //setInitialState();//Performs whatever tasks are leftover before the main loop must run. My game Setup.
     main(); // Start the cycle
 })();
