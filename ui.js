@@ -18,27 +18,26 @@ function onCitizenAddedEvent(citizen){
     const citView = createCitizenView(citizen);
     $("#citizens").append(citView);
 };
-ColonySim.Data.Citizens.addEvent.addHandler(onCitizenAddedEvent);
+ColonySim.DataManagement.Citizens.addEvent.addHandler(onCitizenAddedEvent);
 
-function onCitizenRemovedEvent(label){
-    $("#"+label).remove();
+function onCitizenRemovedEvent(citizen){
+    $("#"+citizen.id).remove();
 };
-ColonySim.Data.Citizens.removeEvent.addHandler(onCitizenRemovedEvent);
+ColonySim.DataManagement.Citizens.removeEvent.addHandler(onCitizenRemovedEvent);
 
 function updateCitizenViews(){
-    ColonySim.Data.Citizens.array.forEach((dc) => {
+    ColonySim.DataManagement.Citizens.data.forEach((dc) => {
         let taskText = `<div class="progress">idling</div>`;
-        if(dc.object.tasks.length > 0){
-            const task = dc.object.tasks[0];
+        if(dc.tasks.length > 0){
+            const task = dc.tasks[0];
             taskText = getTaskProgressView(task);
         }
-        $("#"+dc.label).children(".nameplate").children(".task").html(taskText)
+        $("#"+dc.id).children(".nameplate").children(".task").html(taskText)
     });
 };
 
-function createCitizenView(citizenData){
-    let html = `<div id="`+citizenData.label+`" class="citizen">`;
-    const citizen = citizenData.object;
+function createCitizenView(citizen){
+    let html = `<div id="`+citizen.id+`" class="citizen">`;
     html += `<div src="citIcon.jpg" class="citIcon"></div>`
     html += `<div class="nameplate">`
     html += `<span class="name">`+citizen.name+`</span>`;
@@ -73,47 +72,12 @@ function getTaskProgressView(task){
 };
 
 //---- Location UI -----
-function onLocationAddedEvent(location){
-    const locView = createLocationView(location);
-    $("#locations").append(locView);
-};
-ColonySim.Data.Locations.addEvent.addHandler(onLocationAddedEvent);
-
-function onLocationRemovedEvent(label){
-    $("#"+label).remove();
-};
-ColonySim.Data.Locations.removeEvent.addHandler(onLocationRemovedEvent);
-
-function updateLocationViewsNewTasks(){
-    if (ColonySim.ViewBuffer.Tasks.toCreate.length > 0){
-        ColonySim.ViewBuffer.Tasks.toCreate.forEach(label => {
-            const task = ColonySim.Data.Tasks.getDataByLabel(label);
-            const locationData = ColonySim.Data.Locations.getDataByObject(task.object.location);
-            if (locationData !== undefined){
-                $("#"+locationData.label).children(".tasks").append(createTaskView(task.object));
-                ColonySim.ViewBuffer.Tasks.removeToCreateLabel(label);
-            }
-        });
-    }
-};
-
-function updateLocationViewRemovedTasks(){
-    if (ColonySim.ViewBuffer.Tasks.toRemove.length > 0){
-        ColonySim.ViewBuffer.Tasks.toRemove.forEach(label => {
-            $("#citizens").append($("#"+label).children(".assignee").children(".citizen"))
-            $("#"+label).remove();
-            ColonySim.ViewBuffer.Tasks.removeToRemoveLabel(label);
-        });
-    }
-};
-
-function createLocationView(locationData){
-    let html = `<div id="`+locationData.label+`" class="location">`;
-    let loc = locationData.object;
-    html += `<div class="name">`+loc.name+`</div>`;
+function createLocationView(location){
+    let html = `<div id="`+location.id+`" class="location">`;
+    html += `<div class="name">`+location.name+`</div>`;
     html += `<div class="tasks">`
 
-    loc.taskManagement.tasks.forEach(task =>{
+    location.taskManagement.tasks.forEach(task =>{
         html += createTaskView(task, html);
     })
 
@@ -122,10 +86,41 @@ function createLocationView(locationData){
     return html+"</div>";
 };
 
+function onLocationAddedEvent(location){
+    const locView = createLocationView(location);
+    $("#locations").append(locView);
+};
+ColonySim.DataManagement.Locations.addEvent.addHandler(onLocationAddedEvent);
+
+function onLocationRemovedEvent(id){
+    $("#"+id).remove();
+};
+ColonySim.DataManagement.Locations.removeEvent.addHandler(onLocationRemovedEvent);
+
+function updateLocationViewsNewTasks(){
+    const toCreateIds = ColonySim.ViewBuffer.Tasks.toCreate.readIdSets();
+    toCreateIds.forEach(set => {
+        let taskId = set[0];
+        const task = ColonySim.DataManagement.Tasks.getDataById(taskId);
+        const location = task.location;
+        if (location !== undefined){
+            $("#"+location.id).children(".tasks").append(createTaskView(task));
+        }
+    });
+};
+
+function updateLocationViewRemovedTasks(){
+    const toRemoveIds = ColonySim.ViewBuffer.Tasks.toRemove.readIdSets();
+    toRemoveIds.forEach(set => {
+        let taskId = set[0];
+        $("#citizens").append($("#"+taskId).children(".assignee").children(".citizen"))
+        $("#"+taskId).remove();
+    });
+};
+
 function createTaskView(task) {
     let html = "";
-    let taskData = ColonySim.Data.Tasks.getDataByObject(task);
-    html += `<div id="` + taskData.label + `" class="task">`;
+    html += `<div id="` + task.id + `" class="task">`;
     html += `<span class="name">` + task.name + `</span>`;
     html += `<hr>`;
     html += `<div class="assignee"></div>`;
@@ -135,13 +130,14 @@ function createTaskView(task) {
 
 // ----- Citizen Task Allocation ----
 function updateCitizensCurrentTask(){
-    const bufferedChanges = ColonySim.ViewBuffer.Citizens.toChangeCurrentTask;
-    ColonySim.ViewBuffer.Citizens.toChangeCurrentTask = [];
-    bufferedChanges.forEach(cct => {
-        if ($("#"+cct.currentTask).length !== 0){
-            $("#"+cct.currentTask).children(".assignee").append($("#"+cct.citizen));
+    const cct = ColonySim.ViewBuffer.Citizens.toChangeCurrentTask.readIdSets();
+    cct.forEach(set => {
+        let citizenId = set[0];
+        let taskId = set[1];
+        if ($("#"+taskId).length !== 0){
+            $("#"+taskId).children(".assignee").append($("#"+citizenId));
         } else {
-            $("#citizens").append($("#"+cct.citizen));
+            $("#citizens").append($("#"+citizenId));
         }
     });
 };

@@ -28,7 +28,7 @@ pieces.init();
 
 // Game Initialization
 Generator.citizens(7,pieces.settlement);
-ColonySim.Data.Citizens.array.forEach(cit => {if(cit.object.profession === Professions.CONSTRUCTION){cit.object.profession = Professions.HAULING}});
+ColonySim.DataManagement.Citizens.data.forEach(cit => {if(cit.profession === Professions.CONSTRUCTION){cit.profession = Professions.HAULING}});
 
 // ----------------- Start Game -----------------
 

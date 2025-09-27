@@ -8,40 +8,51 @@ function ColonySimEvent(){
     };
 };
 
-function ColonySimData(label){
+function ColonySimData(){
+    this.id = "";
+};
+
+function ColonySimDataManagement(label){
     this.label = label;
-    this.array = [];
+    this.data = [];
     this.counter = 0;
     this.addEvent = new ColonySimEvent();
-    this.getDataByObject = function(object){
-        return this.array.filter(el => el.object === object)[0];
+    this.getDataById = function(id){
+        return this.data.filter(el => el.id === id)[0];
     };
-    this.getDataByLabel = function(label){
-        return this.array.filter(el => el.label === label)[0];
-    };
-    this.add = function(obj){
+    this.add = function(data){
         this.counter += 1;
         const count = this.counter;
-        const data = {object:obj,id:count,label:this.label+count}
-        this.array.push(data);
+        data.id = this.label+count;
+        this.data.push(data);
         this.addEvent.trigger(data);
     };
     this.removeEvent = new ColonySimEvent();
-    this.remove = function(obj){
-        let data = this.array.filter(d => d.object === obj)[0];
-        const label = data.label;
-        this.removeEvent.trigger(label)
-        this.array = this.array.filter(d => d !== data);
+    this.remove = function(data){
+        this.removeEvent.trigger(data)
+        this.data = this.data.filter(d => d !== data);
         data = null;
     };
 };
 
+function ColonySimViewBuffer(){
+    this.idSets = []; 
+    this.addIdSet = function(...ids){
+        this.idSets.push([...ids]);
+    };
+    this.readIdSets = function(){
+        const idSs = this.idSets;
+        this.idSets = [];
+        return idSs;
+    };
+}
+
 const ColonySim = {
-    Data: {
-        Citizens: new ColonySimData("citizen"),
-        Locations: new ColonySimData("location"),
-        Storages: new ColonySimData("storage"),
-        Tasks: new ColonySimData("task")
+    DataManagement: {
+        Citizens: new ColonySimDataManagement("citizen"),
+        Locations: new ColonySimDataManagement("location"),
+        Storages: new ColonySimDataManagement("storage"),
+        Tasks: new ColonySimDataManagement("task")
     },
     GameControls: {
         requestMainAnimationFrame: undefined,
@@ -71,61 +82,43 @@ const ColonySim = {
             }
         },
         citizensTick(){
-            ColonySim.Data.Citizens.array.forEach(citizen => {
-                citizen.object.tick();
+            ColonySim.DataManagement.Citizens.data.forEach(citizen => {
+                citizen.tick();
             })
         }
     },
     ViewBuffer: {
         Tasks:{
-            toCreate: [],
-            toRemove: [],
-            // for refactoring: Clean handover of state.
-            // emptyBuffer() {
-            //    let toCreateCopy = ColonySim.ViewBuffer.Tasks.toCreate;
-            //    ColonySim.ViewBuffer.Tasks.toCreate = [];
-            //    --- same for toRemove, and all future buffers ---
-            //    return {toCreateCopy,toRemoveCopy};
-            // }
-            // Then implement UI buffer processing accordingly.
-            removeToCreateLabel(label){
-                ColonySim.ViewBuffer.Tasks.toCreate = ColonySim.ViewBuffer.Tasks.toCreate.filter(l => l !== label);
-            },removeToRemoveLabel(label){
-                ColonySim.ViewBuffer.Tasks.toRemove = ColonySim.ViewBuffer.Tasks.toRemove.filter(l => l !== label);
+            toCreate: new ColonySimViewBuffer(),
+            toRemove: new ColonySimViewBuffer(),
+            onAdd(task){
+                ColonySim.ViewBuffer.Tasks.toCreate.addIdSet(task.id);
             },
-            onAdd(taskData){
-                const label = taskData.label;
-                ColonySim.ViewBuffer.Tasks.toCreate.push(label);
-            },
-            onRemove(label){
+            onRemove(task){
                 const vbTasks = ColonySim.ViewBuffer.Tasks;
-                if (vbTasks.toCreate.filter(l => l === label).length > 0){
-                    vbTasks.toCreate = vbTasks.toCreate.filter(l => l !== label);
+                if (vbTasks.toCreate.idSets.filter(i => i[0] === task.id).length > 0){
+                    vbTasks.toCreate.idSets = vbTasks.toCreate.idSets.filter(i => i[0] !== task.id);
                 } else {
-                    vbTasks.toRemove.push(label);
+                    vbTasks.toRemove.addIdSet(task.id);
                 }
             },
             init(){
-                ColonySim.Data.Tasks.addEvent.addHandler(this.onAdd);
-                ColonySim.Data.Tasks.removeEvent.addHandler(this.onRemove);
+                ColonySim.DataManagement.Tasks.addEvent.addHandler(this.onAdd);
+                ColonySim.DataManagement.Tasks.removeEvent.addHandler(this.onRemove);
             }
         },
         Citizens: {
-            toChangeCurrentTask: [],
-            onToChangeCurrentTask(citizenData){
-                const citObj = citizenData.object;
-                const currentTask = ColonySim.Data.Tasks.getDataByObject(citObj.currentTask);
-                const currentTaskChange = {currentTask: currentTask.label,
-                                           citizen: citizenData.label
-                };
-                ColonySim.ViewBuffer.Citizens.toChangeCurrentTask = ColonySim.ViewBuffer.Citizens.toChangeCurrentTask.filter(el => el.citizen !== citizenData.label);
-                ColonySim.ViewBuffer.Citizens.toChangeCurrentTask.push(currentTaskChange);
+            toChangeCurrentTask: new ColonySimViewBuffer,
+            onCurrentTaskChanged(citizen){
+                const cct = ColonySim.ViewBuffer.Citizens.toChangeCurrentTask;
+                cct.idSets = cct.idSets.filter(set => set[0] !== citizen.id);
+                cct.addIdSet(citizen.id, citizen.currentTask.id);
             },
-            subscribeToNewCitizen(citizen){
-                citizen.object.currentTaskChangedEvent.addHandler(ColonySim.ViewBuffer.Citizens.onToChangeCurrentTask);
+            onCitizenCreated(citizen){
+                citizen.currentTaskChangedEvent.addHandler(ColonySim.ViewBuffer.Citizens.onCurrentTaskChanged);
             },
             init(){
-                ColonySim.Data.Citizens.addEvent.addHandler(this.subscribeToNewCitizen);
+                ColonySim.DataManagement.Citizens.addEvent.addHandler(this.onCitizenCreated);
             }
         }
     },
@@ -144,6 +137,7 @@ const Professions = Object.freeze({
 });
 
 function Task(name, ticksToComplete, profession, workCall, location, minLevelRequired, expYield){
+    ColonySimData.call(this);
     this.name = name;
     this.ticksToComplete = ticksToComplete;
     this.ticksDone = 0;
@@ -187,10 +181,11 @@ function Task(name, ticksToComplete, profession, workCall, location, minLevelReq
         this.ticksDone = 0;
         this.status = this.statusMessages.TODO;
     };
-    ColonySim.Data.Tasks.add(this);
+    ColonySim.DataManagement.Tasks.add(this);
 }
 
 function ColonySimStorage(){
+    ColonySimData.call(this);
     this.wares = Object.freeze({wood:"wood",food:"food"});
     this.accepts = {wood:false,food:false};
     this.maxStorage = {wood:50,food:50}
@@ -233,14 +228,15 @@ function ColonySimStorage(){
                 break;
         }
     };
-    ColonySim.Data.Storages.add(this);
+    ColonySim.DataManagement.Storages.add(this);
 }
 
 function Location(name,storage){
+    ColonySimData.call(this);
     this.name = name;
     this.storage = storage;
     this.taskManagement = new Location.TaskManagement(this);
-    ColonySim.Data.Locations.add(this);
+    ColonySim.DataManagement.Locations.add(this);
 }
 
 Location.TaskManagement = function TaskManagement(location){
@@ -265,7 +261,7 @@ Location.TaskManagement = function TaskManagement(location){
     };
     this.removeTask = function(task){
         this.tasks = this.tasks.filter(t => t !== task);
-        ColonySim.Data.Tasks.remove(task);
+        ColonySim.DataManagement.Tasks.remove(task);
     };
     this.tasksDone = function(profession){
         const tasksDone = this.tasks.filter(t => t.profession === profession && t.done())
@@ -332,6 +328,7 @@ Location.TaskManagement = function TaskManagement(location){
 }
 
 function Citizen(name, profession, settlement){
+    ColonySimData.call(this);
     this.name = "J. Doe";
     if (name !== undefined){
         this.name = name;
@@ -356,7 +353,7 @@ function Citizen(name, profession, settlement){
         if (this.tasks.length != 0){
             if (this.currentTask !== this.tasks[0]){
                 this.currentTask = this.tasks[0];
-                this.currentTaskChangedEvent.trigger(ColonySim.Data.Citizens.getDataByObject(this));
+                this.currentTaskChangedEvent.trigger(this);
             };
             this.currentTask.work();
             if(this.currentTask.done()){
@@ -389,13 +386,13 @@ function Citizen(name, profession, settlement){
         if (availableTasks.length > 0){
             citizen.assignTask(availableTasks[0]);
         };
-        ColonySim.Data.Tasks.remove(this);
+        ColonySim.DataManagement.Tasks.remove(this);
     };
     this.createIdleTask = function(){
         let idleTypes = ["stargazing","strolling","picking flowers","watching people work","whistling a tune"];
         let idleType = idleTypes[Math.floor(Math.random() * idleTypes.length)];
         let idleTask = new Task(idleType,60);
-        idleTask.workCall = ()=>{ColonySim.Data.Tasks.remove(idleTask);};
+        idleTask.workCall = ()=>{ColonySim.DataManagement.Tasks.remove(idleTask);};
         return idleTask;
     };
     this.planSeekWorkTask = function(location,unshift){
@@ -405,7 +402,7 @@ function Citizen(name, profession, settlement){
         let IdleTask = this.createIdleTask();
         this.assignTask(IdleTask,unshift);
     };
-    ColonySim.Data.Citizens.add(this);
+    ColonySim.DataManagement.Citizens.add(this);
 }
 
 function Settlement(name, storage){
