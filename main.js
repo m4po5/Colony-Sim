@@ -2,19 +2,19 @@
 
 const pieces = {
     settlement: undefined,
-    forester: new Location("forester"),
+    forester: new ColonySim.Game.Constructors.Location("forester"),
     init(){ // has to go into some sort of factory,
     // even if I could put it into the constructor function,
     // I don't want to see new Stuff().init()!
     // Though this should evaporate as soon as I
     // design a proper module around my game.
-        this.settlement = new Settlement("settlement", this.getSettlementStorage());
-        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.HAULING));
-        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(Professions.ANIMAL_HANDLING));
+        this.settlement = new ColonySim.Game.Constructors.Settlement("settlement", this.getSettlementStorage());
+        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(ColonySim.Game.Constants.Professions.HAULING));
+        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(ColonySim.Game.Constants.Professions.ANIMAL_HANDLING));
         this.settlement.addBuilding(this.forester);
     },
     getSettlementStorage(){
-        const storage = new ColonySimStorage();
+        const storage = new ColonySim.Game.Constructors.Storage();
         storage.accepts.food=true;
         storage.accepts.wood=true;
 
@@ -23,12 +23,12 @@ const pieces = {
 
         return storage;
     }
-}
+};
 pieces.init();
 
 // Game Initialization
-Generator.citizens(7,pieces.settlement);
-ColonySim.DataManagement.Citizens.data.forEach(cit => {if(cit.profession === Professions.CONSTRUCTION){cit.profession = Professions.HAULING}});
+ColonySim.Game.Generator.citizens(7,pieces.settlement);
+ColonySim.Core.DataManagement.Citizens.data.forEach(cit => {if(cit.profession === ColonySim.Game.Constants.Professions.CONSTRUCTION){cit.profession = ColonySim.Game.Constants.Professions.HAULING}});
 
 // ----------------- Start Game -----------------
 

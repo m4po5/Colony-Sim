@@ -1,14 +1,16 @@
 ColonySim.Game = {};
 
-const ProfessionsArray = Object.freeze(["hauling", "construction", "animal handling"]);
-const Professions = Object.freeze({
-    HAULING: ProfessionsArray[0],
-    CONSTRUCTION: ProfessionsArray[1],
-    ANIMAL_HANDLING: ProfessionsArray[2]
+ColonySim.Game.Constants = {};
+ColonySim.Game.Constants.ProfessionsArray = Object.freeze(["hauling", "construction", "animal handling"]);
+ColonySim.Game.Constants.Professions = Object.freeze({
+    HAULING: ColonySim.Game.Constants.ProfessionsArray[0],
+    CONSTRUCTION: ColonySim.Game.Constants.ProfessionsArray[1],
+    ANIMAL_HANDLING: ColonySim.Game.Constants.ProfessionsArray[2]
 });
 
-function Task(name, ticksToComplete, profession, workCall, location, minLevelRequired, expYield){
-    ColonySim.Constructors.Data.call(this);
+ColonySim.Game.Constructors = {};
+ColonySim.Game.Constructors.Task = function(name, ticksToComplete, profession, workCall, location, minLevelRequired, expYield){
+    ColonySim.Core.Constructors.Data.call(this);
     this.name = name;
     this.ticksToComplete = ticksToComplete;
     this.ticksDone = 0;
@@ -52,11 +54,11 @@ function Task(name, ticksToComplete, profession, workCall, location, minLevelReq
         this.ticksDone = 0;
         this.status = this.statusMessages.TODO;
     };
-    ColonySim.DataManagement.Tasks.add(this);
-}
+    ColonySim.Core.DataManagement.Tasks.add(this);
+};
 
-function ColonySimStorage(){
-    ColonySim.Constructors.Data.call(this);
+ColonySim.Game.Constructors.Storage = function(){
+    ColonySim.Core.Constructors.Data.call(this);
     this.wares = Object.freeze({wood:"wood",food:"food"});
     this.accepts = {wood:false,food:false};
     this.maxStorage = {wood:50,food:50}
@@ -99,18 +101,18 @@ function ColonySimStorage(){
                 break;
         }
     };
-    ColonySim.DataManagement.Storages.add(this);
-}
+    ColonySim.Core.DataManagement.Storages.add(this);
+};
 
-function Location(name,storage){
-    ColonySim.Constructors.Data.call(this);
+ColonySim.Game.Constructors.Location = function(name,storage){
+    ColonySim.Core.Constructors.Data.call(this);
     this.name = name;
     this.storage = storage;
-    this.taskManagement = new Location.TaskManagement(this);
-    ColonySim.DataManagement.Locations.add(this);
-}
+    this.taskManagement = new ColonySim.Game.Constructors.Location.TaskManagement(this);
+    ColonySim.Core.DataManagement.Locations.add(this);
+};
 
-Location.TaskManagement = function TaskManagement(location){
+ColonySim.Game.Constructors.Location.TaskManagement = function (location){
     this.location = location;
     this.tasks= [];
     this.tasksOverview = () => { return [{}]};
@@ -132,7 +134,7 @@ Location.TaskManagement = function TaskManagement(location){
     };
     this.removeTask = function(task){
         this.tasks = this.tasks.filter(t => t !== task);
-        ColonySim.DataManagement.Tasks.remove(task);
+        ColonySim.Core.DataManagement.Tasks.remove(task);
     };
     this.tasksDone = function(profession){
         const tasksDone = this.tasks.filter(t => t.profession === profession && t.done())
@@ -169,7 +171,7 @@ Location.TaskManagement = function TaskManagement(location){
                                 && !task.done());
     };
     this.createOverseeTask = function(profession){
-        let task = new Task("overseeing "+profession,
+        let task = new ColonySim.Game.Constructors.Task("overseeing "+profession,
             10,
             profession,
             this.overseeingWorkCall,
@@ -196,19 +198,19 @@ Location.TaskManagement = function TaskManagement(location){
             ass.planIdleTask(true);
         }
     };
-}
+};
 
-function Citizen(name, profession, settlement){
-    ColonySim.Constructors.Data.call(this);
+ColonySim.Game.Constructors.Citizen = function(name, profession, settlement){
+    ColonySim.Core.Constructors.Data.call(this);
     this.name = "J. Doe";
     if (name !== undefined){
         this.name = name;
-    }
+    };
     this.profession = profession;
     this.settlement = settlement;
     this.tasks = [];
     this.currentTask = undefined;
-    this.currentTaskChangedEvent = new ColonySim.Constructors.Event();
+    this.currentTaskChangedEvent = new ColonySim.Core.Constructors.Event();
     this.assignTask = function(task,unshift){
         if(unshift){
             this.tasks.unshift(task);
@@ -216,10 +218,10 @@ function Citizen(name, profession, settlement){
             this.tasks.push(task);
         }
         task.assignee = this;
-    }
+    };
     this.unAssignTask = function(task){
         this.tasks = this.tasks.filter(t => t !== task)
-    }
+    };
     this.tick = function(){
         if (this.tasks.length != 0){
             if (this.currentTask !== this.tasks[0]){
@@ -231,8 +233,7 @@ function Citizen(name, profession, settlement){
                 this.tasks = this.tasks.filter(t => t != this.currentTask);
                 this.currentTask = undefined;
             };
-        }
-        else {
+        } else {
             let availableLocations = this.settlement.getLocationsByProfession(this.profession);
 
             if (availableLocations.length !== 0){
@@ -243,11 +244,11 @@ function Citizen(name, profession, settlement){
                 })
 
                 this.tick();
-            }
-        }
+            };
+        };
     };
     this.createSeekWorkTask = function(location){
-        return new Task("seeking work",30,this.profession,this.seekWorkCall,location,0);
+        return new ColonySim.Game.Constructors.Task("seeking work",30,this.profession,this.seekWorkCall,location,0);
     };
     this.seekWorkCall = function(){
         let citizen = this.assignee;
@@ -257,13 +258,13 @@ function Citizen(name, profession, settlement){
         if (availableTasks.length > 0){
             citizen.assignTask(availableTasks[0]);
         };
-        ColonySim.DataManagement.Tasks.remove(this);
+        ColonySim.Core.DataManagement.Tasks.remove(this);
     };
     this.createIdleTask = function(){
         let idleTypes = ["stargazing","strolling","picking flowers","watching people work","whistling a tune"];
         let idleType = idleTypes[Math.floor(Math.random() * idleTypes.length)];
-        let idleTask = new Task(idleType,60);
-        idleTask.workCall = ()=>{ColonySim.DataManagement.Tasks.remove(idleTask);};
+        let idleTask = new ColonySim.Game.Constructors.Task(idleType,60);
+        idleTask.workCall = ()=>{ColonySim.Core.DataManagement.Tasks.remove(idleTask);};
         return idleTask;
     };
     this.planSeekWorkTask = function(location,unshift){
@@ -273,15 +274,15 @@ function Citizen(name, profession, settlement){
         let IdleTask = this.createIdleTask();
         this.assignTask(IdleTask,unshift);
     };
-    ColonySim.DataManagement.Citizens.add(this);
-}
+    ColonySim.Core.DataManagement.Citizens.add(this);
+};
 
-function Settlement(name, storage){
-    Location.call(this,name, storage);
-    this.taskManagement = new Settlement.TaskManagement(this);
+ColonySim.Game.Constructors.Settlement = function(name, storage){
+    ColonySim.Game.Constructors.Location.call(this,name, storage);
+    this.taskManagement = new ColonySim.Game.Constructors.Settlement.TaskManagement(this);
     this.locations = [];
     this.addBuilding = function (building){
-        if (building instanceof Location){
+        if (building instanceof ColonySim.Game.Constructors.Location){
             this.locations.push(building)
         } else {
             console.error("Settlement.addBuilding: object is not of instance Location")
@@ -313,30 +314,30 @@ function Settlement(name, storage){
         return locations.sort((a,b) => b.taskManagement.minLevelRequired() - a.taskManagement.minLevelRequired());
     };
 }
-Settlement.prototype = Object.create(Location.prototype);//Inherits methods
-Settlement.prototype.constructor = Settlement;
+ColonySim.Game.Constructors.Settlement.prototype = Object.create(ColonySim.Game.Constructors.Location.prototype);//Inherits methods
+ColonySim.Game.Constructors.Settlement.prototype.constructor = ColonySim.Game.Constructors.Settlement;
 
-Settlement.TaskManagement = function TaskManagement(location){
-    Location.TaskManagement.call(this,location);
+ColonySim.Game.Constructors.Settlement.TaskManagement = function(location){
+    ColonySim.Game.Constructors.Location.TaskManagement.call(this,location);
     this.tasks = [];
     this.tasksOverview = function(){
     const gatheringWoodTask = {
         name:"gathering wood",
-        profession:Professions.HAULING,
+        profession:ColonySim.Game.Constants.Professions.HAULING,
         max:4,
         isNeeded:this.isTaskGatheringWoodNeeded,
         call:this.createTaskGatheringWood
     };
     const gatheringFoodTask = {
         name:"gathering food",
-        profession:Professions.HAULING,
+        profession:ColonySim.Game.Constants.Professions.HAULING,
         max:1,
         isNeeded:this.isTaskGatheringFoodNeeded,
         call:this.createTaskGatheringFood
     }
     const huntingTask = {
         name:"hunting",
-        profession:Professions.ANIMAL_HANDLING,
+        profession:ColonySim.Game.Constants.Professions.ANIMAL_HANDLING,
         max:3,
         isNeeded:this.isTaskHuntingNeeded,
         call:this.createTaskHunting
@@ -353,13 +354,13 @@ Settlement.TaskManagement = function TaskManagement(location){
     };
     // Called within taskOverview object.
     this.createTaskGatheringWood = function(location){
-        const gatheringWoodTask = new Task(this.name,
+        const gatheringWoodTask = new ColonySim.Game.Constructors.Task(this.name,
             90,
-            Professions.HAULING,
+            ColonySim.Game.Constants.Professions.HAULING,
             location.taskManagement.gatheringWoodWorkCall,
             location,
             0,
-            [[Professions.HAULING, 10]]);
+            [[ColonySim.Game.Constants.Professions.HAULING, 10]]);
         return gatheringWoodTask;
     };
     // Called within Task object
@@ -376,13 +377,13 @@ Settlement.TaskManagement = function TaskManagement(location){
         }
     };
     this.createTaskGatheringFood = function(location){
-        const gatheringFoodTask = new Task(this.name,
+        const gatheringFoodTask = new ColonySim.Game.Constructors.Task(this.name,
             60,
-            Professions.HAULING,
+            ColonySim.Game.Constants.Professions.HAULING,
             location.taskManagement.gatheringFoodWorkCall,
             location,
             0,
-            [[Professions.HAULING, 10]]);
+            [[ColonySim.Game.Constants.Professions.HAULING, 10]]);
         return gatheringFoodTask;
     };
     this.gatheringFoodWorkCall = function(){
@@ -398,13 +399,13 @@ Settlement.TaskManagement = function TaskManagement(location){
         }
     };
     this.createTaskHunting = function(location){
-        const huntingTask = new Task(this.name,
+        const huntingTask = new ColonySim.Game.Constructors.Task(this.name,
             300,
-            Professions.ANIMAL_HANDLING,
+            ColonySim.Game.Constants.Professions.ANIMAL_HANDLING,
             location.taskManagement.huntingWorkCall,
             location,
             0,
-            [[Professions.ANIMAL_HANDLING, 10]]);
+            [[ColonySim.Game.Constants.Professions.ANIMAL_HANDLING, 10]]);
         return huntingTask;
     };
     this.huntingWorkCall = function(){
@@ -413,8 +414,41 @@ Settlement.TaskManagement = function TaskManagement(location){
         storage.addWares(storage.wares.food,foodGathered);
     };
 };
-Location.TaskManagement.prototype = Object.create(Location.TaskManagement.prototype);
-Location.TaskManagement.prototype.constructor = Location.TaskManagement;
+ColonySim.Game.Constructors.Location.TaskManagement.prototype = Object.create(ColonySim.Game.Constructors.Location.TaskManagement.prototype);
+ColonySim.Game.Constructors.Location.TaskManagement.prototype.constructor = ColonySim.Game.Constructors.Location.TaskManagement;
+
+ColonySim.Game.Generator =  {
+    citizenName(){
+        const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael","Constantin"];
+        const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith","Frederica","Rebecca"];
+
+        let name = "";
+
+        if (Math.random() > 0.5){
+            name = mFirst[Math.floor(Math.random() * mFirst.length)]
+        } else {
+            name = wFirst[Math.floor(Math.random() * wFirst.length)]
+        }
+        return name;
+    },
+    citizenProfession(){
+        return ColonySim.Game.Constants.ProfessionsArray[Math.floor(Math.random() * ColonySim.Game.Constants.ProfessionsArray.length)];
+    },
+    citizen(settlement){
+        let citizen = new ColonySim.Game.Constructors.Citizen(this.citizenName(), this.citizenProfession(), settlement);
+        return citizen;
+    },
+    citizens(amount,settlement){
+        if (amount === undefined){
+            return [];
+        }
+        const citizens = [];
+        for (let i = 0; i < amount; i++) {
+            citizens.push(this.citizen(settlement));
+        }
+        return citizens;
+    }
+};
 
 ColonySim.Game.Controls = {
     requestMainAnimationFrame: undefined,
@@ -444,41 +478,8 @@ ColonySim.Game.Controls = {
         }
     },
     citizensTick(){
-        ColonySim.DataManagement.Citizens.data.forEach(citizen => {
+        ColonySim.Core.DataManagement.Citizens.data.forEach(citizen => {
             citizen.tick();
         })
-    }
-};
-
-const Generator = {
-    citizenName(){
-        const mFirst = ["John","Mark","Peter","Nathaniel","Jordan","Michael","Constantin"];
-        const wFirst = ["Sarah","Selena","Robin","Victoria","Marion","Judith","Frederica","Rebecca"];
-
-        let name = "";
-
-        if (Math.random() > 0.5){
-            name = mFirst[Math.floor(Math.random() * mFirst.length)]
-        } else {
-            name = wFirst[Math.floor(Math.random() * wFirst.length)]
-        }
-        return name;
-    },
-    citizenProfession(){
-        return ProfessionsArray[Math.floor(Math.random() * ProfessionsArray.length)];
-    },
-    citizen(settlement){
-        let citizen = new Citizen(this.citizenName(), this.citizenProfession(), settlement);
-        return citizen;
-    },
-    citizens(amount,settlement){
-        if (amount === undefined){
-            return [];
-        }
-        const citizens = [];
-        for (let i = 0; i < amount; i++) {
-            citizens.push(this.citizen(settlement));
-        }
-        return citizens;
     }
 };
