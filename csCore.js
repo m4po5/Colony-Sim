@@ -60,70 +60,56 @@ ColonySim.Core.DataManagement = {
     Tasks: new ColonySim.Core.Constructors.DataManagement("task")
 };
 
-ColonySim.Core.ViewBuffers = {}
-ColonySim.Core.ViewBuffers.Tasks = {
-    toCreate: new ColonySim.Core.Constructors.IdSetsBuffer(),
-    toRemove: new ColonySim.Core.Constructors.IdSetsBuffer(),
-    onAdd(task){
-        ColonySim.Core.ViewBuffers.Tasks.toCreate.addIdSet(task.id);
-    },
-    onRemove(task){
-        const vbTasks = ColonySim.Core.ViewBuffers.Tasks;
-        if (vbTasks.toCreate.idSets.filter(i => i[0] === task.id).length > 0){
-            vbTasks.toCreate.idSets = vbTasks.toCreate.idSets.filter(i => i[0] !== task.id);
-        } else {
-            vbTasks.toRemove.addIdSet(task.id);
-        }
+ColonySim.Core.ViewBuffers = {};
+ColonySim.Core.ViewBuffers.Utility = {};
+ColonySim.Core.ViewBuffers.Utility.selectPathByData = function(root, data){
+    let path = {};
+    if(data instanceof ColonySim.Game.Constructors.Citizen){ path = root.citizens;}
+    if(data instanceof ColonySim.Game.Constructors.Location){ path = root.locations;}
+    if(data instanceof ColonySim.Game.Constructors.Task){ path = root.tasks;}
+    return path;
+}
+ColonySim.Core.ViewBuffers.AddEvents = {};
+ColonySim.Core.ViewBuffers.AddEvents.onData = function(data){
+    let path = ColonySim.Core.ViewBuffers.Utility.selectPathByData(ColonySim.Core.ViewBuffers.AddEvents, data);
+    path.addIdSet(data.id);
+};
+ColonySim.Core.ViewBuffers.AddEvents.locations = new ColonySim.Core.Constructors.IdSetsBuffer();
+ColonySim.Core.ViewBuffers.AddEvents.citizens = new ColonySim.Core.Constructors.IdSetsBuffer();
+ColonySim.Core.ViewBuffers.AddEvents.tasks = new ColonySim.Core.Constructors.IdSetsBuffer();
+
+ColonySim.Core.DataManagement.Citizens.addEvent.addHandler(ColonySim.Core.ViewBuffers.AddEvents.onData);
+ColonySim.Core.DataManagement.Locations.addEvent.addHandler(ColonySim.Core.ViewBuffers.AddEvents.onData);
+ColonySim.Core.DataManagement.Tasks.addEvent.addHandler(ColonySim.Core.ViewBuffers.AddEvents.onData);
+
+ColonySim.Core.ViewBuffers.RemoveEvents = {};
+ColonySim.Core.ViewBuffers.RemoveEvents.onData = function(data){
+    const pathR = ColonySim.Core.ViewBuffers.Utility.selectPathByData(ColonySim.Core.ViewBuffers.RemoveEvents, data);
+    const pathA = ColonySim.Core.ViewBuffers.Utility.selectPathByData(ColonySim.Core.ViewBuffers.AddEvents, data);
+    if (pathA.idSets.filter(i => i[0] === data.id).length > 0){
+        pathA.idSets = pathA.idSets.filter(i => i[0] !== data.id);
+    } else {
+        pathR.addIdSet(data.id);
     }
 };
-ColonySim.Core.DataManagement.Tasks.addEvent.addHandler(ColonySim.Core.ViewBuffers.Tasks.onAdd);
-ColonySim.Core.DataManagement.Tasks.removeEvent.addHandler(ColonySim.Core.ViewBuffers.Tasks.onRemove);
+ColonySim.Core.ViewBuffers.RemoveEvents.locations = new ColonySim.Core.Constructors.IdSetsBuffer();
+ColonySim.Core.ViewBuffers.RemoveEvents.citizens = new ColonySim.Core.Constructors.IdSetsBuffer();
+ColonySim.Core.ViewBuffers.RemoveEvents.tasks = new ColonySim.Core.Constructors.IdSetsBuffer();
 
-ColonySim.Core.ViewBuffers.Citizens = {
-    toCreate: new ColonySim.Core.Constructors.IdSetsBuffer(),
-    toRemove: new ColonySim.Core.Constructors.IdSetsBuffer(),
-    onAdd(citizen){
-        ColonySim.Core.ViewBuffers.Citizens.toCreate.addIdSet(citizen.id);
-    },
-    onRemove(citizen){
-        const vbTasks = ColonySim.Core.ViewBuffers.Citizens;
-        if (vbTasks.toCreate.idSets.filter(i => i[0] === citizen.id).length > 0){
-            vbTasks.toCreate.idSets = vbTasks.toCreate.idSets.filter(i => i[0] !== citizen.id);
-        } else {
-            vbTasks.toRemove.addIdSet(citizen.id);
-        }
-    }
-};
-ColonySim.Core.DataManagement.Citizens.addEvent.addHandler(ColonySim.Core.ViewBuffers.Citizens.onAdd);
-ColonySim.Core.DataManagement.Citizens.removeEvent.addHandler(ColonySim.Core.ViewBuffers.Citizens.onRemove);
+ColonySim.Core.DataManagement.Citizens.removeEvent.addHandler(ColonySim.Core.ViewBuffers.RemoveEvents.onData);
+ColonySim.Core.DataManagement.Locations.removeEvent.addHandler(ColonySim.Core.ViewBuffers.RemoveEvents.onData);
+ColonySim.Core.DataManagement.Tasks.removeEvent.addHandler(ColonySim.Core.ViewBuffers.RemoveEvents.onData);
 
-ColonySim.Core.ViewBuffers.Citizens.Changes = {
-    toChangeCurrentTask: new ColonySim.Core.Constructors.IdSetsBuffer(),
+ColonySim.Core.ViewBuffers.ChangeEvents = {};
+ColonySim.Core.ViewBuffers.ChangeEvents.Citizens = {
+    currentTasks: new ColonySim.Core.Constructors.IdSetsBuffer(),
     onCurrentTaskChanged(citizen){
-        const cct = ColonySim.Core.ViewBuffers.Citizens.Changes.toChangeCurrentTask;
+        const cct = ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.currentTasks;
         cct.idSets = cct.idSets.filter(set => set[0] !== citizen.id);
         cct.addIdSet(citizen.id, citizen.currentTask.id);
     },
     onCitizenCreated(citizen){
-        citizen.currentTaskChangedEvent.addHandler(ColonySim.Core.ViewBuffers.Citizens.Changes.onCurrentTaskChanged);
+        citizen.currentTaskChangedEvent.addHandler(ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.onCurrentTaskChanged);
     }
 };
-ColonySim.Core.DataManagement.Citizens.addEvent.addHandler(ColonySim.Core.ViewBuffers.Citizens.Changes.onCitizenCreated);
-
-ColonySim.Core.ViewBuffers.Locations = {
-    toCreate: new ColonySim.Core.Constructors.IdSetsBuffer(),
-    toRemove: new ColonySim.Core.Constructors.IdSetsBuffer(),
-    onAdd(location){
-        ColonySim.Core.ViewBuffers.Locations.toCreate.addIdSet(location.id);
-    },
-    onRemove(location){
-        const vbTasks = ColonySim.Core.ViewBuffers.Locations;
-        if (vbTasks.toCreate.idSets.filter(i => i[0] === location.id).length > 0){
-            vbTasks.toCreate.idSets = vbTasks.toCreate.idSets.filter(i => i[0] !== location.id);
-        } else {
-            vbTasks.toRemove.addIdSet(location.id);
-        }
-    }
-}
-ColonySim.Core.DataManagement.Locations.addEvent.addHandler(ColonySim.Core.ViewBuffers.Locations.onAdd);
-ColonySim.Core.DataManagement.Locations.removeEvent.addHandler(ColonySim.Core.ViewBuffers.Locations.onRemove);
+ColonySim.Core.DataManagement.Citizens.addEvent.addHandler(ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.onCitizenCreated);
