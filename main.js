@@ -48,7 +48,7 @@ ColonySim.Core.DataManagement.Citizens.data.forEach(cit => {if(cit.profession ==
         
         const timeSinceRender = tFrame - ColonySim.Game.Controls.lastRender
         if(timeSinceRender > ColonySim.Game.Controls.frameLength){
-            updateSettlementView();
+            ColonySim.UI.update();
             ColonySim.Game.Controls.lastRender = tFrame;
         }
     }

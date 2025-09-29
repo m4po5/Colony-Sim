@@ -7,6 +7,8 @@
     - :warning: :bug: ~~Idle Tasks causing non-breaking errors!~~
   - [ ] refactor UI
   - [ ] fix "forgotten Task" issue
+    - :information::question_mark: use dataManagement instead of location.taskManagement.property?
+  - [ ] investigate copypaste/boilerplate code in ViewBuffers
   - [ ] add visual to done tasks
   - [ ] Blackboard and Management Tabs per Location
 - [ ] Construct Building Task: Design and Implementation
