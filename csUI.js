@@ -7,60 +7,44 @@ ColonySim.UI.update = function(){
 };
 
 ColonySim.UI.Components = {}
-ColonySim.UI.Components.citizenNameplate = function(citizen){
-    let html = `<div id="`+citizen.id+`" class="citizen">`;
-    html += `<div src="citIcon.jpg" class="citIcon"></div>`
-    html += `<div class="nameplate">`
-    html += `<span class="name">`+citizen.name+`</span>`;
-    
-    html += `<div class="task">`
-    if (citizen.tasks.length > 0){
-        let task = citizen.tasks[0];
-        html += ColonySim.UI.Components.taskProgressView(task);
-    } else {
-        html += `<div class="progress">idling</div>`;
-    }
-    html += `</div></div>` //nameplate and task
+ColonySim.UI.Components.citizenMiniView = function(citizen){
+    let citizenView = $(`<div id="`+citizen.id+`" class="citizen"></div>`);
+    let citizenNameplateView = $(`<div class="nameplate"></div>`);
 
-    return html+"</div>"; //citizen div
+    citizenNameplateView.append(`<span class="name">`+citizen.name+`</span>`);
+    citizenNameplateView.append($(ColonySim.UI.Components.citizenTaskView()));
+
+    citizenView.append(`<div src="citIcon.jpg" class="citIcon"></div>`);
+    citizenView.append(citizenNameplateView);
+    return citizenView;
 };
-ColonySim.UI.Components.taskProgressView = function(task){
-    let html = `<div class="progress">`+task.name;
-    html += `<div class="progressbar `;
-        switch (task.status){ // refactor into Updaters
-            case task.statusMessages.INPROGRESS:
-                let progress = task.ticksDone/task.ticksToComplete;
-                html += `inProgress" style="width:`+ progress*100 +`%">`;
-                break
-            case task.statusMessages.DONE:
-                html += `done">`;
-                break;
-            default:
-                html += `todo">`;
-        }
-    return html+= task.name+"</div></div>";
+ColonySim.UI.Components.citizenTaskView = function(){
+    let taskView = $(`<div class="task">`);
+    let tName = "idling";
+    let progressView = $(`<div class="progress">`+tName+`</div>`);
+    
+    progressView.append(`<div class="progressbar todo">`+tName+`</div>`);
+    taskView.append(progressView);
+    return taskView;
 };
-ColonySim.UI.Components.locationTaskOverview = function(location){
-    let html = `<div id="`+location.id+`" class="location">`;
-    html += `<div class="name">`+location.name+`</div>`;
-    html += `<div class="tasks">`
+ColonySim.UI.Components.locationOverview = function(location){
+    let locationView = $(`<div id="`+location.id+`" class="location"></div>`);
+    let taskView = $(`<div class="tasks"></div>`);
 
     location.taskManagement.tasks.forEach(task =>{
-        html += ColonySim.UI.Components.taskView(task, html);
-    })
+        taskView.append($(ColonySim.UI.Components.locationTaskView(task)));
+    });
 
-    html += `</div>`;//closing tasks div
-
-    return html+"</div>";
+    locationView.append(`<div class="name">`+location.name+`</div>`);
+    locationView.append(taskView);
+    return locationView;
 };
-ColonySim.UI.Components.taskView = function(task) {
-    let html = "";
-    html += `<div id="` + task.id + `" class="task">`;
-    html += `<span class="name">` + task.name + `</span>`;
-    html += `<hr>`;
-    html += `<div class="assignee"></div>`;
-    html += `</div>`; //close task div
-    return html;
+ColonySim.UI.Components.locationTaskView = function(task) {
+    let taskView = $(`<div id="` + task.id + `" class="task">`);
+    taskView.append(`<span class="name">` + task.name + `</span>`);
+    taskView.append(`<hr>`);
+    taskView.append(`<div class="assignee"></div>`);
+    return taskView;
 };
 
 ColonySim.UI.Adders = {};
@@ -71,7 +55,7 @@ ColonySim.UI.Adders.locationsTasks = function(){
         const task = ColonySim.Core.DataManagement.Tasks.getDataById(taskId);
         const location = task.location;
         if (location !== undefined){
-            $("#"+location.id).children(".tasks").append(ColonySim.UI.Components.taskView(task));
+            $("#"+location.id).children(".tasks").append(ColonySim.UI.Components.locationTaskView(task));
         }
     });
 };
@@ -80,7 +64,7 @@ ColonySim.UI.Adders.citizens = function(){
     toCreateIds.forEach(set => {
         const citizenId = set[0];
         const citizen = ColonySim.Core.DataManagement.Citizens.getDataById(citizenId);
-        const citView = ColonySim.UI.Components.citizenNameplate(citizen);
+        const citView = ColonySim.UI.Components.citizenMiniView(citizen);
         $("#citizens").append(citView);
     });
 };
@@ -89,7 +73,7 @@ ColonySim.UI.Adders.locations = function(){
     toCreateIds.forEach(set => {
         const locationId = set[0];
         const location = ColonySim.Core.DataManagement.Locations.getDataById(locationId);
-        const locView = ColonySim.UI.Components.locationTaskOverview(location);
+        const locView = ColonySim.UI.Components.locationOverview(location);
         $("#locations").append(locView);
     });
 };
@@ -101,36 +85,80 @@ ColonySim.UI.Adders.update = function(){
 }
 
 ColonySim.UI.Changers = {};
+ColonySim.UI.Changers.Utility = {}
+ColonySim.UI.Changers.Utility.replaceTextOnly = function(jqSelector,text){
+    jqSelector.contents().filter(function() { return this.nodeType == 3; }).first().replaceWith(text);
+};
+
 ColonySim.UI.Changers.storage = function(){
     $("#wood").text(pieces.settlement.storage.stored.wood);
     $("#food").text(pieces.settlement.storage.stored.food);
 };
-ColonySim.UI.Changers.citizenTaskProgress = function(){
-    ColonySim.Core.DataManagement.Citizens.data.forEach((dc) => {
-        let taskText = `<div class="progress">idling</div>`;
-        if(dc.tasks.length > 0){
-            const task = dc.tasks[0];
-            taskText = ColonySim.UI.Components.taskProgressView(task);
-        }
-        $("#"+dc.id).children(".nameplate").children(".task").html(taskText)
+ColonySim.UI.Changers.citizenTaskProgressBarWidth = function(taskProgressBarView, task){
+    let progress = task.ticksDone/task.ticksToComplete;
+    taskProgressBarView.css("width",progress*100+"%")
+}
+ColonySim.UI.Changers.citizenTaskStatusClass = function(taskProgressBarView, taskStatus){
+    let statusClasses = ["todo","inProgress","done"];
+    let status = null;
+
+    switch (taskStatus) {
+        case "in progress":
+            status = statusClasses.splice(1,1)[0];
+            break
+        case "done":
+            status = statusClasses.splice(2,1)[0];
+            break;
+        default:
+            status = statusClasses.splice(0,1)[0];
+    };
+    statusClasses.splice(0,0,status);
+    taskProgressBarView.addClass(statusClasses[0]);
+    taskProgressBarView.removeClass(statusClasses[1]);
+    taskProgressBarView.removeClass(statusClasses[2]);
+}
+ColonySim.UI.Changers.citizenTaskProgress = function(citizen){
+    const task = citizen.currentTask;
+    const taskProgressView = $("#"+citizen.id).find(".progress");
+    const taskProgressBarView = taskProgressView.children(".progressbar");
+    let status = "to do";
+    if(task !== undefined){
+        status = task.status;
+        ColonySim.UI.Changers.citizenTaskProgressBarWidth(taskProgressBarView,task);
+    };
+    ColonySim.UI.Changers.citizenTaskStatusClass(taskProgressBarView,status);
+};
+ColonySim.UI.Changers.citizensTaskProgress = function(){
+    ColonySim.Core.DataManagement.Citizens.data.forEach((citizen) => {
+        ColonySim.UI.Changers.citizenTaskProgress(citizen);
     });
 };
  ColonySim.UI.Changers.citizensCurrentTask = function(){
     const cct = ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.currentTasks.readIdSets();
     cct.forEach(set => {
-        let citizenId = set[0];
-        let taskId = set[1];
+        const citizenId = set[0];
+        const taskId = set[1];
+        const citizenView = $("#"+citizenId);
+        const task = ColonySim.Core.DataManagement.Tasks.getDataById(taskId);
+        const taskProgressView = citizenView.find(".progress");
+        const taskProgressBarView = taskProgressView.children(".progressbar");
+        let tName = "idling";
+
+        if (task !== undefined){tName = task.name;};
+        ColonySim.UI.Changers.Utility.replaceTextOnly(taskProgressView,tName);
+        ColonySim.UI.Changers.Utility.replaceTextOnly(taskProgressBarView,tName);
+
         if ($("#"+taskId).length !== 0){
-            $("#"+taskId).children(".assignee").append($("#"+citizenId));
+            $("#"+taskId).children(".assignee").append(citizenView);
         } else {
-            $("#citizens").append($("#"+citizenId));
+            $("#citizens").append(citizenView);
         }
     });
 };
 ColonySim.UI.Changers.update = function(){
     ColonySim.UI.Changers.storage();
-    ColonySim.UI.Changers.citizenTaskProgress();
     ColonySim.UI.Changers.citizensCurrentTask();
+    ColonySim.UI.Changers.citizensTaskProgress();
 }
 
 ColonySim.UI.Removers = {};

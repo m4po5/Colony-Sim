@@ -5,7 +5,7 @@
   - [x] Blackboard per Location
   - [x] Citizens show up in locations where they are performing their tasks.
     - :warning: :bug: ~~Idle Tasks causing non-breaking errors!~~
-  - [ ] refactor UI
+  - [x] refactor UI
   - [ ] fix "forgotten Task" issue
     - :information::question_mark: use dataManagement instead of location.taskManagement.property?
   - [ ] investigate copypaste/boilerplate code in ViewBuffers
