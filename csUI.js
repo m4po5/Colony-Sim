@@ -29,10 +29,6 @@ ColonySim.UI.Components.locationOverview = function(location){
     let locationView = $(`<div id="`+location.id+`" class="location"></div>`);
     let taskView = $(`<div class="tasks"></div>`);
     
-    location.taskManagement.tasks().forEach(task =>{
-        taskView.append($(ColonySim.UI.Components.locationTaskView(task)));
-    });
-
     locationView.append(`<div class="name">`+location.name+`</div>`);
     locationView.append(taskView);
     return locationView;
@@ -77,9 +73,9 @@ ColonySim.UI.Adders.locations = function(){
 };
 
 ColonySim.UI.Adders.update = function(){
+    ColonySim.UI.Adders.locations();
     ColonySim.UI.Adders.locationsTasks();
     ColonySim.UI.Adders.citizens();
-    ColonySim.UI.Adders.locations();
 }
 
 ColonySim.UI.Changers = {};
@@ -192,6 +188,6 @@ ColonySim.UI.Removers.locations = function(){
 }
 ColonySim.UI.Removers.update = function(){
     ColonySim.UI.Removers.citizens();
-    ColonySim.UI.Removers.locationsTasks();
     ColonySim.UI.Removers.locations();
+    ColonySim.UI.Removers.locationsTasks();
 };

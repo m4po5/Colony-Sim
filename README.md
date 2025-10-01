@@ -1,6 +1,6 @@
 # Colony-Sim
 ## Roadmap
-- [ ] UI Overhaul
+- [x] UI Overhaul
   - [x] Merge Task Progress into minimized Citizens View
   - [x] Blackboard per Location
   - [x] Citizens show up in locations where they are performing their tasks.
@@ -8,7 +8,8 @@
   - [x] refactor UI
   - [x] fix "forgotten Task" issue
   - [x] add visual to done tasks
-  - [ ] Blackboard and Management Tabs per Location
+  - [ ] ~~Blackboard and Management Tabs per Location~~
+- [ ] **conclude** Prototype and **reforge** the game
 - [ ] Construct Building Task: Design and Implementation
 - [ ] Need Food Update
 - [ ] Deterioration Of Surplus Wares

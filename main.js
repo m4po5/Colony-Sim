@@ -32,6 +32,47 @@ ColonySim.Core.DataManagement.Citizens.data.forEach(cit => {if(cit.profession ==
 
 // ----------------- Start Game -----------------
 
+ColonySim.Log = {};
+ColonySim.Log.FPS = {
+    print: false,
+    lastLog: null,
+    lastPrint: null,
+    timeToNextPrint: 1000,
+    graph: [],
+    graphMax: 10,
+    addFPS: function(fps){
+        const lFps = ColonySim.Log.FPS;
+        lFps.graph.push(fps);
+        if(lFps.graph.length > lFps.graphMax){
+            lFps.graph.shift();
+        };
+    },
+    log: function(tFrame){
+        const lFps = ColonySim.Log.FPS;
+        if(lFps.print === false){
+            return;
+        }
+        if(lFps.lastLog !== null) {lFps.addFPS(tFrame-lFps.lastLog)}
+        lFps.lastLog = tFrame;
+        if ((tFrame - lFps.lastPrint) >= lFps.timeToNextPrint){
+            console.log("FPS: " + Math.floor(1000/lFps.getMedian()));
+            lFps.lastPrint = tFrame;
+        }
+    },
+    getMedian: function(){
+        const lFps = ColonySim.Log.FPS;
+        if(lFps.graph.length === 0){
+            return;
+        }
+        const sortedGraph = lFps.graph.sort((a,b) => a - b);
+        const halfPoint = Math.floor(sortedGraph.length / 2);
+        return (lFps.graph.length % 2 ? 
+            lFps.graph[halfPoint]:
+            (sortedGraph[halfPoint-1] + sortedGraph[halfPoint]) / 2
+        );
+    }
+};
+
 // inspiration from source: https://developer.mozilla.org/en-US/docs/Games/Anatomy#building_a_main_loop_in_javascript
 ; (() => {
     function main(tFrame) {
@@ -49,6 +90,7 @@ ColonySim.Core.DataManagement.Citizens.data.forEach(cit => {if(cit.profession ==
         const timeSinceRender = tFrame - ColonySim.Game.Controls.lastRender
         if(timeSinceRender > ColonySim.Game.Controls.frameLength){
             ColonySim.UI.update();
+            ColonySim.Log.FPS.log(tFrame);
             ColonySim.Game.Controls.lastRender = tFrame;
         }
     }
