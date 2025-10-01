@@ -114,50 +114,42 @@ ColonySim.Game.Constructors.Location = function(name,storage){
 
 ColonySim.Game.Constructors.Location.TaskManagement = function (location){
     this.location = location;
-    this.tasks= [];
     this.tasksOverview = () => { return [{}]};
+    this.tasks = function(){
+        return ColonySim.Core.DataManagement.Tasks.data.filter(t => t.location === this.location);
+    }
     this.minLevelRequired = function(){
         let minLevel = 10;
-        this.tasks.forEach(task => {
+        this.tasks().forEach(task => {
             if(task.minLevelRequired < minLevel){
                 minLevel = task.minLevelRequired;
             }
         })
         return minLevel;
     };
-    this.addTask = function(task,unshift){
-        if(unshift){
-            this.tasks.unshift(task);
-        } else {
-            this.tasks.push(task);
-        }
-    };
-    this.removeTask = function(task){
-        this.tasks = this.tasks.filter(t => t !== task);
-        ColonySim.Core.DataManagement.Tasks.remove(task);
-    };
     this.tasksDone = function(profession){
-        const tasksDone = this.tasks.filter(t => t.profession === profession && t.done())
+        const tasksDone = this.tasks().filter(t => t.profession === profession
+            && t.done())
         return tasksDone;
     };
     this.getTaskToPlan = function(profession){
         let taskToPlan = undefined;
         const tasksOverview = this.tasksOverview().filter(task => task.profession===profession);
-        const runningTasks = this.tasks.filter(t => t.profession === profession);
+        const runningTasks = this.tasks().filter(t => t.profession === profession);
         tasksOverview.forEach(task => {
             if(task.isNeeded(this.location)){
                 const runningTask = runningTasks.filter(rTask => rTask.name===task.name);
-                if (runningTask.length<task.max){
-                    taskToPlan=task.call(this.location);
-                }
-            }
+                if (runningTask.length<task.max && taskToPlan === undefined){
+                    taskToPlan=task;
+                };
+            };
         })
         return taskToPlan;
     };
     this.getSurplusTasks = function(profession){
         const surplusTasks = [];
         const tasksOverview = this.tasksOverview().filter(task => task.profession===profession);
-        const runningTasks = this.tasks.filter(t => t.profession === profession);
+        const runningTasks = this.tasks().filter(t => t.profession === profession);
         tasksOverview.forEach(t => {
             if (!t.isNeeded(this.location)){
                 surplusTasks.push(...runningTasks.filter(r => r.name === t.name));
@@ -166,7 +158,7 @@ ColonySim.Game.Constructors.Location.TaskManagement = function (location){
         return surplusTasks;
     };
     this.getAvailableTasks = function(profession){
-        return this.tasks.filter(task => task.assignee === undefined
+        return this.tasks().filter(task => task.assignee === undefined
                                 && task.profession === profession
                                 && !task.done());
     };
@@ -181,18 +173,19 @@ ColonySim.Game.Constructors.Location.TaskManagement = function (location){
         return task;
     };
     this.overseeingWorkCall = function(){
+        const dmTasks = ColonySim.Core.DataManagement.Tasks;
         let tasksDone = this.location.taskManagement.tasksDone(this.profession).filter(t => t!==this);
         let tasksToCancel = this.location.taskManagement.getSurplusTasks(this.profession);
         let taskToPlan = undefined;
         let ass = this.assignee;
         let workTask = undefined;
         if (tasksToCancel.length > 0){
-            this.location.taskManagement.removeTask(tasksToCancel[0]);
+            dmTasks.remove(tasksToCancel[0]);
         } else if ((taskToPlan = this.location.taskManagement.getTaskToPlan(this.profession))!==undefined){
-            this.location.taskManagement.addTask(taskToPlan);
+            taskToPlan.call(this.location)
         } else if(tasksDone.length > 0){
-            this.location.taskManagement.removeTask(tasksDone[0]);
-        } else if((workTask=this.location.taskManagement.tasks.filter(t => t.profession === ass.profession && t.assignee === undefined)[0]) !== undefined){
+            dmTasks.remove(tasksDone[0]);
+        } else if((workTask=this.location.taskManagement.tasks().filter(t => t.profession === ass.profession && t.assignee === undefined)[0]) !== undefined){
             ass.assignTask(workTask,true);
         } else {
             ass.planIdleTask(true);
@@ -303,7 +296,7 @@ ColonySim.Game.Constructors.Settlement = function(name, storage){
     };
     this.locationOfProfession = function(location,profession){
         let result = false;
-        location.taskManagement.tasks.forEach(task => {
+        location.taskManagement.tasks().forEach(task => {
             if(task.profession === profession){
                 result = true;
             }
@@ -319,7 +312,6 @@ ColonySim.Game.Constructors.Settlement.prototype.constructor = ColonySim.Game.Co
 
 ColonySim.Game.Constructors.Settlement.TaskManagement = function(location){
     ColonySim.Game.Constructors.Location.TaskManagement.call(this,location);
-    this.tasks = [];
     this.tasksOverview = function(){
     const gatheringWoodTask = {
         name:"gathering wood",

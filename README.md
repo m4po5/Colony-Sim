@@ -4,11 +4,9 @@
   - [x] Merge Task Progress into minimized Citizens View
   - [x] Blackboard per Location
   - [x] Citizens show up in locations where they are performing their tasks.
-    - :warning: :bug: ~~Idle Tasks causing non-breaking errors!~~
+  - [x] investigate copypaste/boilerplate code in ViewBuffers
   - [x] refactor UI
-  - [ ] fix "forgotten Task" issue
-    - :information::question_mark: use dataManagement instead of location.taskManagement.property?
-  - [ ] investigate copypaste/boilerplate code in ViewBuffers
+  - [x] fix "forgotten Task" issue
   - [ ] add visual to done tasks
   - [ ] Blackboard and Management Tabs per Location
 - [ ] Construct Building Task: Design and Implementation

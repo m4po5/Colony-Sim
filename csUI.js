@@ -30,8 +30,8 @@ ColonySim.UI.Components.citizenTaskView = function(){
 ColonySim.UI.Components.locationOverview = function(location){
     let locationView = $(`<div id="`+location.id+`" class="location"></div>`);
     let taskView = $(`<div class="tasks"></div>`);
-
-    location.taskManagement.tasks.forEach(task =>{
+    
+    location.taskManagement.tasks().forEach(task =>{
         taskView.append($(ColonySim.UI.Components.locationTaskView(task)));
     });
 

@@ -9,8 +9,8 @@ const pieces = {
     // Though this should evaporate as soon as I
     // design a proper module around my game.
         this.settlement = new ColonySim.Game.Constructors.Settlement("settlement", this.getSettlementStorage());
-        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(ColonySim.Game.Constants.Professions.HAULING));
-        this.settlement.taskManagement.addTask(this.settlement.taskManagement.createOverseeTask(ColonySim.Game.Constants.Professions.ANIMAL_HANDLING));
+        this.settlement.taskManagement.createOverseeTask(ColonySim.Game.Constants.Professions.HAULING);
+        this.settlement.taskManagement.createOverseeTask(ColonySim.Game.Constants.Professions.ANIMAL_HANDLING);
         this.settlement.addBuilding(this.forester);
     },
     getSettlementStorage(){
