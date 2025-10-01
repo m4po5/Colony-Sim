@@ -19,6 +19,7 @@ ColonySim.Game.Constructors.Task = function(name, ticksToComplete, profession, w
     this.location = location;
     this.minLevelRequired = minLevelRequired;
     this.expYield = expYield;
+    this.taskDoneEvent = new ColonySim.Core.Constructors.Event();
     this.statusMessages = Object.freeze({
         TODO: "to do",
         INPROGRESS: "in progress",
@@ -37,6 +38,8 @@ ColonySim.Game.Constructors.Task = function(name, ticksToComplete, profession, w
             this.workCall();
             if (this.perpetual === true){
                 this.reset();
+            } else {
+                this.taskDoneEvent.trigger(this);
             }
         }
     };

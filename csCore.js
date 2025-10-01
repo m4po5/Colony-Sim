@@ -101,15 +101,38 @@ ColonySim.Core.DataManagement.Locations.removeEvent.addHandler(ColonySim.Core.Vi
 ColonySim.Core.DataManagement.Tasks.removeEvent.addHandler(ColonySim.Core.ViewBuffers.RemoveEvents.onData);
 
 ColonySim.Core.ViewBuffers.ChangeEvents = {};
+ColonySim.Core.ViewBuffers.ChangeEvents.Tasks = {
+    doneTasks: new ColonySim.Core.Constructors.IdSetsBuffer(),
+    onTaskDone(task){
+        const ceTasks = ColonySim.Core.ViewBuffers.ChangeEvents.Tasks;
+        ceTasks.onTaskRemoved(task);
+        ceTasks.doneTasks.addIdSet(task.id);
+    },
+    onTaskCreated(task){
+        task.taskDoneEvent.addHandler(ColonySim.Core.ViewBuffers.ChangeEvents.Tasks.onTaskDone);
+    },
+    onTaskRemoved(task){
+        const dt = ColonySim.Core.ViewBuffers.ChangeEvents.Tasks.doneTasks
+        dt.idSets = dt.idSets.filter(set => set[0] !== task.id);
+    }
+};
+ColonySim.Core.DataManagement.Tasks.addEvent.addHandler(ColonySim.Core.ViewBuffers.ChangeEvents.Tasks.onTaskCreated);
+ColonySim.Core.DataManagement.Tasks.removeEvent.addHandler(ColonySim.Core.ViewBuffers.ChangeEvents.Tasks.onTaskRemoved);
+
 ColonySim.Core.ViewBuffers.ChangeEvents.Citizens = {
     currentTasks: new ColonySim.Core.Constructors.IdSetsBuffer(),
     onCurrentTaskChanged(citizen){
-        const cct = ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.currentTasks;
-        cct.idSets = cct.idSets.filter(set => set[0] !== citizen.id);
-        cct.addIdSet(citizen.id, citizen.currentTask.id);
+        const ceCitizens = ColonySim.Core.ViewBuffers.ChangeEvents.Citizens;
+        ceCitizens.onCitizenRemoved(citizen);
+        ceCitizens.currentTasks.addIdSet(citizen.id, citizen.currentTask.id);
     },
     onCitizenCreated(citizen){
         citizen.currentTaskChangedEvent.addHandler(ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.onCurrentTaskChanged);
+    },
+    onCitizenRemoved(citizen){
+        const cct = ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.currentTasks;
+        cct.idSets = cct.idSets.filter(set => set[0] !== citizen.id);
     }
 };
 ColonySim.Core.DataManagement.Citizens.addEvent.addHandler(ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.onCitizenCreated);
+ColonySim.Core.DataManagement.Citizens.removeEvent.addHandler(ColonySim.Core.ViewBuffers.ChangeEvents.Citizens.onCitizenRemoved);

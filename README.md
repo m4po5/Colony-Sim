@@ -7,7 +7,7 @@
   - [x] investigate copypaste/boilerplate code in ViewBuffers
   - [x] refactor UI
   - [x] fix "forgotten Task" issue
-  - [ ] add visual to done tasks
+  - [x] add visual to done tasks
   - [ ] Blackboard and Management Tabs per Location
 - [ ] Construct Building Task: Design and Implementation
 - [ ] Need Food Update

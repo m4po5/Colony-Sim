@@ -50,6 +50,7 @@ body {
 }
 .location .task {
     float:left;
+    position:relative;
     background-color:white;
     color:black;
     white-space: nowrap;
@@ -60,6 +61,12 @@ body {
     padding-top:3pt;
     width:180px;
     height:100px;
+}
+.task .checkMark {
+    position:absolute;
+    bottom:0;
+    right:0;
+    font-size: xx-large;
 }
 
 #citizens {
@@ -100,7 +107,8 @@ body {
     font-weight:bold;
 }
 
-.nameplate .task {
+.progress{
+    position:relative;
     border: 1px solid #280003ff;
     border-radius:10pt;
     background-color:#280003ff;
@@ -109,16 +117,11 @@ body {
     font-weight:bold;
     white-space: nowrap;
     overflow:hidden;
-    padding-left:0pt;
+    padding-left:4pt;
     padding-right:0pt;
     padding-top:0pt;
     width:90%;
     height: auto;
-}
-
-.progress{
-    position:relative;
-    padding-left:4pt;
 }
 .progress .progressbar{
     position:absolute;
