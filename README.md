@@ -1,5 +1,11 @@
 # Colony-Sim
-## Roadmap
+
+## Doomed Colonies - Roadmap
+- [x] Mock-Up and Review design
+- [x] game concept and design
+- [ ] plan new roadmap
+
+## CONCLUDED Prototype Roadmap
 - [x] UI Overhaul
   - [x] Merge Task Progress into minimized Citizens View
   - [x] Blackboard per Location
@@ -9,14 +15,14 @@
   - [x] fix "forgotten Task" issue
   - [x] add visual to done tasks
   - [ ] ~~Blackboard and Management Tabs per Location~~
-- [ ] **conclude** Prototype and **reforge** the game
-- [ ] Construct Building Task: Design and Implementation
-- [ ] Need Food Update
-- [ ] Deterioration Of Surplus Wares
-- [ ] Concept Profession Tree, Unemployment, Advancement and Career Change
-- [ ] Taverns and Entertainment for the Workers
+- [ ] ~~**conclude** Prototype and **reforge** the game~~
+- [ ] ~~Construct Building Task: Design and Implementation~~
+- [ ] ~~Need Food Update~~
+- [ ] ~~Deterioration Of Surplus Wares~~
+- [ ] ~~Concept Profession Tree, Unemployment, Advancement and Career Change~~
+- [ ] ~~Taverns and Entertainment for the Workers~~
 
-## Technical Desicions
+## Technical Decisions
 ### Main Loop
 - Decoupled from UI to allow Browser go to sleep and the game to catch up with time when the user tabs back in.
 - :exclamation: Careful use of Events is advised to prevent bombarding the browser in that scenario!

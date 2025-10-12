@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Doomed Colonies</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div id="grid">
+            <div id="header">
+                <div id="top">
+                    <div id="controls">
+                        <img src="../img/buttonPlay.png" onclick="ColonySim.Game.Controls.playToggle()" class="button">
+                    </div>
+                    <span id="score">Score:0</span>
+                </div>
+                <div id="bottom">
+                    <span class="inventory">Iron: <span id="stone">0</span></span>
+                    <span class="inventory">Stone: <span id="stone">0</span></span>
+                    <span class="inventory">Wood: <span id="stone">0</span></span>
+                    <span class="inventory">Food: <span id="stone">0</span></span>
+                </div>
+            </div>
+            <div id="left-pane">
+                <button id="farm" class="btWorkshop">Farm</button>
+                <button id="woodcutter" class="btWorkshop">Woodcutter</button>
+                <button id="mine" class="btWorkshop selected">Mine</button>
+                <button id="smelter" class="btWorkshop">Smelter</button>
+            </div>
+            <div id="content">
+                <div id="wsStats">
+                    <div id="wsLevel">
+                        Level <span id="wsLevelCurrent">4</span>
+                        <button id="btWsLevelUpgrade">+</button>
+                    </div>
+                    <div id="wsHousing">
+                        <span id="wsHousingCurrent">8</span>/
+                        <span id="wsHousingMax">10</span> Worker Housings
+                        <div class="upBtn"></div>
+                        <div class="dnBtn"></div>
+                    </div>
+                </div>
+                <div>
+                    <div id="task1" class="task">
+                        <span class="name">stone mining</span>
+                        <div class="assignees">
+                            <span class="current">5</span>/
+                            <span class="max">5</span>
+                        </div>
+                        <hr>
+                    </div>
+                    <div id="task2" class="task">
+                        <span class="name">iron ore mining</span>
+                        <div class="assignees">
+                            <span class="current">3</span>/
+                            <span class="max">5</span>
+                        </div>
+                        <hr>
+                    </div>
+                    <div class="task empty">+</div>
+                </div>
+            </div>
+            <div id="right-pane"></div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,176 @@
+#grid {
+    display: grid;
+    grid-template-areas:
+    "header header"
+    "left-pane content";
+    grid-template-columns: 1fr 6fr;
+}
+
+#grid > #header {
+    grid-area: header;
+    display: grid;
+    border: 0.5px solid gray;
+}
+
+#controls {
+    float:left;
+}
+
+#score {
+    float:right;
+}
+
+.inventory {
+    float:right;
+    padding-left:2pt;
+    padding-right:2pt;
+    margin-right:-0.5pt;
+    font-size:small;
+    border: 0.5pt solid black;
+}
+
+#grid > #left-pane {
+    grid-area: left-pane;
+    border: 0.5px solid gray;
+}
+
+.btWorkshop {
+    background-color:gray;
+    font-size:large;
+    width: 100%;
+    margin-bottom: 1pt;
+}
+
+.btWorkshop.selected {
+    background-color: goldenrod;
+}
+
+#grid > #content {
+    grid-area: content;
+    border: 1px solid blueviolet;
+    display: grid;
+}
+
+#wsLevel {
+    float:left;
+}
+
+#wsHousing {
+    float:right;
+    position: relative;
+    padding-right: 20px;
+}
+
+.task {
+    float:left;
+    position:relative;
+    background-color:white;
+    border: 1px solid brown;
+    color:black;
+    white-space: nowrap;
+    overflow:hidden;
+    margin:1pt;
+    padding:3pt;
+    width:180px;
+    height:100px;
+}
+
+.task.empty {
+    border-style: dashed;
+    font: 3.2em monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.task.empty:hover {
+    background-color: lightgray;
+    cursor: pointer;
+}
+
+/* arrow buttons */
+
+.upBtn, .dnBtn {
+    position:absolute;
+	width: 14px;
+	height: 12px;
+	cursor: pointer;
+}
+
+.upBtn, .dnBtn {
+	right: 3px;
+}
+
+.upBtn {
+	top: -3px;
+}
+
+.upBtn:after, .upBtn:before {
+	position: absolute;
+	border: medium solid transparent;
+	content: " ";
+	height: 0;
+	width: 0;
+	bottom: 2px;
+}
+
+.upBtn:after {
+	border-color: transparent transparent white;
+}
+
+.upBtn:before {
+	border-color: transparent transparent black;
+}
+
+.dnBtn {
+	bottom: -3px;
+}
+
+.dnManyBtn {
+	bottom: -3px;
+}
+
+.dnBtn:after, .dnBtn:before {
+	position: absolute;
+	border: medium solid transparent;
+	content: " ";
+	height: 0;
+	width: 0;
+	top: 2px;
+}
+
+/* Overall size of buttons controlled by this style
+   border-width and margin-left should be the same. */
+.upBtn:before, .dnBtn:before {
+	border-width: 6px;
+	left: 50%;
+	margin-left: -6px;
+}
+
+/* Thickness of up/down button lines controlled by this style.
+   border-width and margin-left should be the same.
+   Thickness = :before.border-width minus :after.border-width */
+.upBtn:after, .dnBtn:after {
+	border-width: 4px;
+	left: 50%;
+	margin-left: -4px;
+}
+
+/* See comment on .upBtn:after, .dnBtn:after */
+.upManyBtn:after {
+	border-width: 3px;
+	left: 50%;
+	margin-left: -3px;
+}
+
+.dnBtn:after {
+	border-color: white transparent transparent;
+}
+
+.dnBtn:before {
+	border-color: black transparent transparent;
+}
+
+.dnBtn.disabled:before {
+	border-color: #999 transparent transparent;
+}
