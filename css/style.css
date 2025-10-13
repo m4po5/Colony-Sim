@@ -1,0 +1,65 @@
+body {
+    background-color: lightgray;
+    font-family:'Courier New', Courier, monospace;
+}
+
+#wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#content {
+    width: 70%;
+    display: grid;
+    grid-template-areas:
+    "timer inventory score"
+    "workshops details cmdHelper"
+    "bottom-left cmdLine bottom-right"
+    "bottom-left log bottom-right";
+    grid-template-columns: 1fr 5fr 1fr;
+    grid-template-rows: 1fr 5fr 0.5fr 4fr;
+    font-size: small;
+}
+
+#content > div {
+    border:3px black solid;
+    background-color:white;
+    margin:5px;
+    padding:10px;
+}
+
+#timer {
+    grid-area: timer;
+}
+
+#inventory {
+    grid-area: inventory;
+}
+
+#score {
+    grid-area: score;
+}
+
+#workshops {
+    grid-area: workshops;
+}
+
+#details {
+    grid-area: details;
+}
+
+#cmdHelper {
+    grid-area: cmdHelper;
+}
+
+#cmdLine {
+    grid-area: cmdLine;
+}
+
+#content > #log {
+    grid-area: log;
+    border-color: transparent;
+    background-color: transparent;
+    font-size: x-small;
+}
